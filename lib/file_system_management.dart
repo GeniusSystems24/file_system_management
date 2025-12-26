@@ -28,7 +28,7 @@
 ///   // ...
 /// }
 /// ```
-library file_system_management;
+library;
 
 // Core exports
 export 'src/core/app_directory.dart';
