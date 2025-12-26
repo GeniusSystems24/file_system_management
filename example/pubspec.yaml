@@ -1,0 +1,21 @@
+name: file_system_management_example
+description: Example app for file_system_management package
+publish_to: none
+
+environment:
+  sdk: ^3.7.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  file_system_management:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

@@ -2,12 +2,15 @@
 /// with progress tracking, caching, and notifications.
 ///
 /// ## Features:
-/// - Download and upload file management
+/// - Download and upload file management with injectable handlers
+/// - Custom upload/download callbacks for any backend provider
+/// - Social media-inspired skins (WhatsApp, Telegram, Instagram)
 /// - Mutex-based locking to prevent duplicate operations
 /// - Automatic file caching with URL recognition
 /// - Stream-based progress updates
 /// - Customizable widgets for media and documents
 /// - Pause, resume, cancel, and retry operations
+/// - RTL and Dark mode support
 ///
 /// ## Basic Usage:
 /// ```dart
@@ -27,6 +30,25 @@
 ///     });
 ///   // ...
 /// }
+/// ```
+///
+/// ## Custom Handlers:
+/// ```dart
+/// // Use custom upload/download handlers
+/// ImageMessageTransferWidget(
+///   url: 'https://example.com/image.jpg',
+///   onDownload: (payload) => myCustomDownloadStream(payload),
+///   onUpload: (payload) => myCustomUploadStream(payload),
+/// )
+/// ```
+///
+/// ## Theming:
+/// ```dart
+/// // Apply WhatsApp-like skin
+/// SocialTransferTheme(
+///   data: SocialTransferThemeData.whatsapp(),
+///   child: MyApp(),
+/// )
 /// ```
 library;
 
@@ -49,8 +71,20 @@ export 'src/models/notifier.dart';
 // Legacy compatibility - TaskItem is now TransferItem
 export 'src/models/task_item.dart';
 
-// Widgets
+// Handlers - Injectable upload/download abstractions
+export 'src/handlers/cancellation_token.dart';
+export 'src/handlers/transfer_handler.dart';
+export 'src/handlers/transfer_progress.dart';
+export 'src/handlers/transfer_result.dart';
+
+// Theme - Social media skins and customization
+export 'src/theme/social_transfer_theme.dart';
+
+// Widgets - Core transfer widgets
 export 'src/widgets/transfer_card.dart';
 export 'src/widgets/transfer_progress_indicator.dart';
 export 'src/widgets/media_download_card.dart';
 export 'src/widgets/document_download_card.dart';
+
+// Widgets - Message transfer widgets
+export 'src/widgets/messages/messages.dart';
