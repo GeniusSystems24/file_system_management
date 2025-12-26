@@ -91,8 +91,10 @@ class UploadPayload {
     this.fileSize,
     this.formFields,
     this.metadata,
-  }) : assert(filePath != null || bytes != null,
-            'Either filePath or bytes must be provided');
+  }) : assert(
+         filePath != null || bytes != null,
+         'Either filePath or bytes must be provided',
+       );
 
   /// Creates a payload from a file path.
   factory UploadPayload.fromPath({
@@ -229,15 +231,19 @@ abstract class UploadHandler {
   /// Retries a failed upload.
   ///
   /// Returns a new progress stream for the retry attempt.
-  Stream<TransferProgress> retry(
+  Stream<TransferProgress> retryUpload(
     String uploadId,
     String uploadUrl,
     UploadPayload payload, {
     TransferConfig? config,
     CancellationToken? cancellationToken,
   }) {
-    return upload(uploadUrl, payload,
-        config: config, cancellationToken: cancellationToken);
+    return upload(
+      uploadUrl,
+      payload,
+      config: config,
+      cancellationToken: cancellationToken,
+    );
   }
 }
 
@@ -282,13 +288,17 @@ abstract class DownloadHandler {
   Future<bool> cancel(String downloadId) async => false;
 
   /// Retries a failed download.
-  Stream<TransferProgress> retry(
+  Stream<TransferProgress> retryDownload(
     String downloadId,
     DownloadPayload payload, {
     TransferConfig? config,
     CancellationToken? cancellationToken,
   }) {
-    return download(payload, config: config, cancellationToken: cancellationToken);
+    return download(
+      payload,
+      config: config,
+      cancellationToken: cancellationToken,
+    );
   }
 }
 
@@ -296,6 +306,74 @@ abstract class DownloadHandler {
 ///
 /// This is a convenience class for handlers that support both operations.
 abstract class TransferHandler implements UploadHandler, DownloadHandler {
+  // UploadHandler required methods
+  @override
+  Stream<TransferProgress> upload(
+    String uploadUrl,
+    UploadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  });
+
+  @override
+  Future<TransferResult> uploadAndComplete(
+    String uploadUrl,
+    UploadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  });
+
+  // DownloadHandler required methods
+  @override
+  Stream<TransferProgress> download(
+    DownloadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  });
+
+  @override
+  Future<TransferResult> downloadAndComplete(
+    DownloadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  });
+
+  /// Retries a failed upload.
+  ///
+  /// Returns a new progress stream for the retry attempt.
+  @override
+  Stream<TransferProgress> retryUpload(
+    String uploadId,
+    String uploadUrl,
+    UploadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  }) {
+    return upload(
+      uploadUrl,
+      payload,
+      config: config,
+      cancellationToken: cancellationToken,
+    );
+  }
+
+  /// Retries a failed download.
+  ///
+  /// Returns a new progress stream for the retry attempt.
+  @override
+  Stream<TransferProgress> retryDownload(
+    String downloadId,
+    DownloadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  }) {
+    return download(
+      payload,
+      config: config,
+      cancellationToken: cancellationToken,
+    );
+  }
+
   /// Opens a completed file.
   Future<bool> openFile(String filePath) async => false;
 
@@ -329,8 +407,8 @@ class TransferBuilder {
   TransferBuilder({
     UploadHandler? uploadHandler,
     DownloadHandler? downloadHandler,
-  })  : _uploadHandler = uploadHandler,
-        _downloadHandler = downloadHandler;
+  }) : _uploadHandler = uploadHandler,
+       _downloadHandler = downloadHandler;
 
   /// Sets the upload progress callback.
   TransferBuilder onUploadProgress(OnUploadProgress callback) {
@@ -375,7 +453,12 @@ class TransferBuilder {
   }
 
   /// Starts an upload operation.
-  Future<TransferResult> upload(String uploadUrl, UploadPayload payload) async {
+  Future<TransferResult> upload(
+    String uploadUrl,
+    UploadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  }) async {
     if (_uploadHandler == null) {
       return const TransferFailure(
         message: 'No upload handler configured',
@@ -388,8 +471,8 @@ class TransferBuilder {
       final stream = _uploadHandler.upload(
         uploadUrl,
         payload,
-        config: _config,
-        cancellationToken: _cancellationToken,
+        config: config ?? _config,
+        cancellationToken: cancellationToken ?? _cancellationToken,
       );
 
       TransferProgress? lastProgress;
@@ -445,7 +528,11 @@ class TransferBuilder {
   }
 
   /// Starts a download operation.
-  Future<TransferResult> download(DownloadPayload payload) async {
+  Future<TransferResult> download(
+    DownloadPayload payload, {
+    TransferConfig? config,
+    CancellationToken? cancellationToken,
+  }) async {
     if (_downloadHandler == null) {
       return const TransferFailure(
         message: 'No download handler configured',
@@ -457,8 +544,8 @@ class TransferBuilder {
     try {
       final stream = _downloadHandler.download(
         payload,
-        config: _config,
-        cancellationToken: _cancellationToken,
+        config: config ?? _config,
+        cancellationToken: cancellationToken ?? _cancellationToken,
       );
 
       TransferProgress? lastProgress;

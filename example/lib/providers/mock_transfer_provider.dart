@@ -22,8 +22,9 @@ class MockTransferProvider {
     CancellationToken? cancellationToken,
   }) async* {
     final steps = 20;
-    final stepDuration = Duration(milliseconds: duration.inMilliseconds ~/ steps);
-    bool isPaused = false;
+    final stepDuration = Duration(
+      milliseconds: duration.inMilliseconds ~/ steps,
+    );
 
     // Register pause/resume handlers
     void Function()? unregisterCancel;
@@ -48,7 +49,9 @@ class MockTransferProvider {
       await Future.delayed(stepDuration);
 
       // Simulate random failure
-      if (failureRate > 0 && _random.nextDouble() < failureRate && i > steps ~/ 2) {
+      if (failureRate > 0 &&
+          _random.nextDouble() < failureRate &&
+          i > steps ~/ 2) {
         yield TransferProgress.failed(
           bytesTransferred: (totalBytes * i / steps).round(),
           totalBytes: totalBytes,
@@ -102,9 +105,7 @@ class MockTransferProvider {
   }
 
   /// Simulates a transfer that always fails.
-  Stream<TransferProgress> mockFailingTransfer({
-    required int totalBytes,
-  }) {
+  Stream<TransferProgress> mockFailingTransfer({required int totalBytes}) {
     return mockDownload(
       totalBytes: totalBytes,
       duration: const Duration(seconds: 3),
@@ -140,7 +141,6 @@ class MockTransferProvider {
 /// Mock download handler that uses [MockTransferProvider].
 class MockDownloadHandler implements DownloadHandler {
   final MockTransferProvider _provider = MockTransferProvider();
-  bool _isPaused = false;
   String? _currentId;
 
   @override
@@ -150,7 +150,6 @@ class MockDownloadHandler implements DownloadHandler {
     CancellationToken? cancellationToken,
   }) {
     _currentId = payload.url;
-    _isPaused = false;
 
     return _provider.mockDownload(
       totalBytes: payload.expectedSize ?? 1024 * 1024,
@@ -190,7 +189,6 @@ class MockDownloadHandler implements DownloadHandler {
   @override
   Future<bool> pause(String downloadId) async {
     if (_currentId == downloadId) {
-      _isPaused = true;
       return true;
     }
     return false;
@@ -199,7 +197,6 @@ class MockDownloadHandler implements DownloadHandler {
   @override
   Future<bool> resume(String downloadId) async {
     if (_currentId == downloadId) {
-      _isPaused = false;
       return true;
     }
     return false;
@@ -216,13 +213,17 @@ class MockDownloadHandler implements DownloadHandler {
   }
 
   @override
-  Stream<TransferProgress> retry(
+  Stream<TransferProgress> retryDownload(
     String downloadId,
     DownloadPayload payload, {
     TransferConfig? config,
     CancellationToken? cancellationToken,
   }) {
-    return download(payload, config: config, cancellationToken: cancellationToken);
+    return download(
+      payload,
+      config: config,
+      cancellationToken: cancellationToken,
+    );
   }
 }
 
@@ -284,13 +285,18 @@ class MockUploadHandler implements UploadHandler {
   Future<bool> cancel(String uploadId) async => true;
 
   @override
-  Stream<TransferProgress> retry(
+  Stream<TransferProgress> retryUpload(
     String uploadId,
     String uploadUrl,
     UploadPayload payload, {
     TransferConfig? config,
     CancellationToken? cancellationToken,
   }) {
-    return upload(uploadUrl, payload, config: config, cancellationToken: cancellationToken);
+    return upload(
+      uploadUrl,
+      payload,
+      config: config,
+      cancellationToken: cancellationToken,
+    );
   }
 }

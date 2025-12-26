@@ -220,66 +220,98 @@ ImageMessageTransferWidget(
 
 ## Theming & Skins
 
+The `SocialTransferThemeData` class extends `ThemeExtension`, integrating seamlessly with Flutter's theme system.
+
 ### Apply a Social Media Skin
 
 ```dart
-// WhatsApp style
-SocialTransferTheme(
-  data: SocialTransferThemeData.whatsapp(),
-  child: MyApp(),
-)
-
-// Telegram style
-SocialTransferTheme(
-  data: SocialTransferThemeData.telegram(),
-  child: MyApp(),
-)
-
-// Instagram style
-SocialTransferTheme(
-  data: SocialTransferThemeData.instagram(),
-  child: MyApp(),
+MaterialApp(
+  theme: ThemeData(
+    extensions: [SocialTransferThemeData.whatsapp()],
+  ),
+  darkTheme: ThemeData(
+    colorScheme: ColorScheme.dark(),
+    extensions: [SocialTransferThemeData.whatsapp(isDark: true)],
+  ),
 )
 ```
 
-### Dark Mode Support
+### Available Skins
 
 ```dart
-SocialTransferTheme(
-  data: SocialTransferThemeData.whatsapp(isDark: true),
-  child: MyApp(),
-)
+// WhatsApp style
+SocialTransferThemeData.whatsapp()
+SocialTransferThemeData.whatsapp(isDark: true)
+
+// Telegram style
+SocialTransferThemeData.telegram()
+SocialTransferThemeData.telegram(isDark: true)
+
+// Instagram style
+SocialTransferThemeData.instagram()
+SocialTransferThemeData.instagram(isDark: true)
+
+// From current theme context
+SocialTransferThemeData.of(context)
 ```
 
 ### Custom Theme
 
 ```dart
-SocialTransferTheme(
-  data: SocialTransferThemeData(
-    primaryColor: Colors.blue,
-    secondaryColor: Colors.blueAccent,
-    bubbleColor: Colors.white,
-    progressForegroundColor: Colors.blue,
-    bubbleBorderRadius: BorderRadius.circular(16),
-    actionButtonSize: 48,
-    showSpeed: true,
-    showEta: true,
+MaterialApp(
+  theme: ThemeData(
+    extensions: [
+      SocialTransferThemeData(
+        primaryColor: Colors.blue,
+        secondaryColor: Colors.blueAccent,
+        bubbleColor: Colors.white,
+        progressBackgroundColor: Colors.grey.shade200,
+        progressForegroundColor: Colors.blue,
+        successColor: Colors.green,
+        errorColor: Colors.red,
+        warningColor: Colors.orange,
+        pausedColor: Colors.orange,
+        textColor: Colors.black87,
+        subtitleColor: Colors.grey,
+        iconColor: Colors.grey,
+        overlayColor: Colors.black38,
+        bubbleBorderRadius: BorderRadius.circular(16),
+        progressBorderRadius: BorderRadius.circular(4),
+        buttonBorderRadius: BorderRadius.circular(20),
+        thumbnailBorderRadius: BorderRadius.circular(8),
+        actionButtonSize: 48,
+        showSpeed: true,
+        showEta: true,
+      ),
+    ],
   ),
-  child: MyApp(),
 )
 ```
 
 ### Override Specific Properties
 
 ```dart
-SocialTransferTheme(
-  data: SocialTransferThemeData.whatsapp().copyWith(
-    primaryColor: Colors.purple,
-    actionButtonSize: 56,
-    showEta: true,
+MaterialApp(
+  theme: ThemeData(
+    extensions: [
+      SocialTransferThemeData.whatsapp().copyWith(
+        primaryColor: Colors.purple,
+        actionButtonSize: 56,
+        showEta: true,
+      ),
+    ],
   ),
-  child: MyApp(),
 )
+```
+
+### Accessing Theme in Widgets
+
+```dart
+// Using Theme.of(context).extension
+final theme = Theme.of(context).extension<SocialTransferThemeData>();
+
+// Using the convenience extension
+final theme = context.socialTransferTheme;
 ```
 
 ## RTL Support
@@ -399,7 +431,7 @@ If you're upgrading from version 0.0.1:
 
 1. **TaskItem is now TransferItem** - The old name is still exported for compatibility
 2. **New message widgets** - Use `AudioMessageTransferWidget`, `ImageMessageTransferWidget`, etc.
-3. **Theming** - Wrap your app with `SocialTransferTheme` for consistent styling
+3. **Theming** - Use `ThemeData.extensions` with `SocialTransferThemeData` instead of the deprecated `SocialTransferTheme` widget
 4. **Custom handlers** - Use `onUpload`/`onDownload` callbacks for custom logic
 
 ## License

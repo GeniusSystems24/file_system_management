@@ -40,16 +40,14 @@ class _ExampleAppState extends State<ExampleApp> {
     setState(() => _isRtl = isRtl);
   }
 
-  SocialTransferThemeData _getThemeData() {
-    final isDark = _themeMode == ThemeMode.dark;
+  SocialTransferThemeData _getThemeData({bool? isDark}) {
+    isDark ??= _themeMode == ThemeMode.dark;
 
     return switch (_currentSkin) {
       SocialSkin.whatsapp => SocialTransferThemeData.whatsapp(isDark: isDark),
       SocialSkin.telegram => SocialTransferThemeData.telegram(isDark: isDark),
       SocialSkin.instagram => SocialTransferThemeData.instagram(isDark: isDark),
-      SocialSkin.custom => SocialTransferThemeData.fromContext(
-          Navigator.of(context).context,
-        ),
+      SocialSkin.custom => SocialTransferThemeData.of(context),
     };
   }
 
@@ -62,6 +60,7 @@ class _ExampleAppState extends State<ExampleApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: _getSeedColor()),
         useMaterial3: true,
+        extensions: [_getThemeData(isDark: false)],
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -69,15 +68,13 @@ class _ExampleAppState extends State<ExampleApp> {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        extensions: [_getThemeData(isDark: true)],
       ),
       locale: _isRtl ? const Locale('ar') : const Locale('en'),
       builder: (context, child) {
         return Directionality(
           textDirection: _isRtl ? TextDirection.rtl : TextDirection.ltr,
-          child: SocialTransferTheme(
-            data: _getThemeDataForContext(context),
-            child: child!,
-          ),
+          child: child!,
         );
       },
       home: MainScreen(
@@ -97,17 +94,6 @@ class _ExampleAppState extends State<ExampleApp> {
       SocialSkin.telegram => const Color(0xFF3390EC),
       SocialSkin.instagram => const Color(0xFFE1306C),
       SocialSkin.custom => Colors.blue,
-    };
-  }
-
-  SocialTransferThemeData _getThemeDataForContext(BuildContext context) {
-    final isDark = _themeMode == ThemeMode.dark;
-
-    return switch (_currentSkin) {
-      SocialSkin.whatsapp => SocialTransferThemeData.whatsapp(isDark: isDark),
-      SocialSkin.telegram => SocialTransferThemeData.telegram(isDark: isDark),
-      SocialSkin.instagram => SocialTransferThemeData.instagram(isDark: isDark),
-      SocialSkin.custom => SocialTransferThemeData.fromContext(context),
     };
   }
 }

@@ -23,9 +23,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الإعدادات'),
-      ),
+      appBar: AppBar(title: const Text('الإعدادات')),
       body: ListView(
         children: [
           // Skin selection
@@ -60,9 +58,9 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -116,10 +114,7 @@ class SettingsScreen extends StatelessWidget {
           color: color.withOpacity(isSelected ? 1.0 : 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : color,
-        ),
+        child: Icon(icon, color: isSelected ? Colors.white : color),
       ),
       title: Text(
         title,
@@ -128,9 +123,10 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
       subtitle: Text(subtitle),
-      trailing: isSelected
-          ? Icon(Icons.check_circle, color: color)
-          : const Icon(Icons.circle_outlined),
+      trailing:
+          isSelected
+              ? Icon(Icons.check_circle, color: color)
+              : const Icon(Icons.circle_outlined),
       onTap: () => onSkinChanged(skin),
     );
   }
@@ -170,12 +166,16 @@ class SettingsScreen extends StatelessWidget {
       subtitle: Text(isRtl ? 'العربية' : 'English'),
       value: isRtl,
       onChanged: onRtlChanged,
-      secondary: Icon(isRtl ? Icons.format_textdirection_r_to_l : Icons.format_textdirection_l_to_r),
+      secondary: Icon(
+        isRtl
+            ? Icons.format_textdirection_r_to_l
+            : Icons.format_textdirection_l_to_r,
+      ),
     );
   }
 
   Widget _buildPreview(BuildContext context) {
-    final theme = SocialTransferTheme.of(context);
+    final theme = context.socialTransferTheme;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -225,10 +225,7 @@ class SettingsScreen extends StatelessWidget {
                       color: theme.primaryColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      Icons.description,
-                      color: theme.primaryColor,
-                    ),
+                    child: Icon(Icons.description, color: theme.primaryColor),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -236,11 +233,15 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       Text(
                         'document.pdf',
-                        style: theme.fileNameStyle ?? TextStyle(color: theme.textColor),
+                        style:
+                            theme.fileNameStyle ??
+                            TextStyle(color: theme.textColor),
                       ),
                       Text(
                         '2.5 MB',
-                        style: theme.fileSizeStyle ?? TextStyle(color: theme.subtitleColor),
+                        style:
+                            theme.fileSizeStyle ??
+                            TextStyle(color: theme.subtitleColor),
                       ),
                     ],
                   ),
@@ -271,10 +272,7 @@ class SettingsScreen extends StatelessWidget {
                       color: theme.successColor.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      Icons.check_circle,
-                      color: theme.successColor,
-                    ),
+                    child: Icon(Icons.check_circle, color: theme.successColor),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -282,7 +280,9 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       Text(
                         'photo.jpg',
-                        style: theme.fileNameStyle ?? TextStyle(color: theme.textColor),
+                        style:
+                            theme.fileNameStyle ??
+                            TextStyle(color: theme.textColor),
                       ),
                       Text(
                         'مكتمل',
@@ -312,9 +312,9 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 Text(
                   'معلومات المظهر:',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text('Skin: ${theme.skin.name}'),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 /// Available social media skins for transfer widgets.
@@ -22,12 +24,18 @@ enum SocialSkin {
 ///
 /// Example:
 /// ```dart
-/// SocialTransferTheme(
-///   data: SocialTransferThemeData.whatsapp(),
-///   child: MyApp(),
+/// MaterialApp(
+///   theme: ThemeData(
+///     extensions: [SocialTransferThemeData.whatsapp()],
+///   ),
 /// )
+///
+/// // Access in widgets:
+/// final theme = Theme.of(context).extension<SocialTransferThemeData>();
+/// // Or use the extension:
+/// final theme = context.socialTransferTheme;
 /// ```
-class SocialTransferThemeData {
+class SocialTransferThemeData extends ThemeExtension<SocialTransferThemeData> {
   /// The skin type being used.
   final SocialSkin skin;
 
@@ -336,12 +344,12 @@ class SocialTransferThemeData {
     this.showCircularProgress = true,
     this.useBlurOverlay = true,
     this.blurSigma = 8.0,
-  })  : incomingBubbleColor = incomingBubbleColor ?? bubbleColor,
-        outgoingBubbleColor = outgoingBubbleColor ?? bubbleColor,
-        incomingBubbleBorderRadius =
-            incomingBubbleBorderRadius ?? bubbleBorderRadius,
-        outgoingBubbleBorderRadius =
-            outgoingBubbleBorderRadius ?? bubbleBorderRadius;
+  }) : incomingBubbleColor = incomingBubbleColor ?? bubbleColor,
+       outgoingBubbleColor = outgoingBubbleColor ?? bubbleColor,
+       incomingBubbleBorderRadius =
+           incomingBubbleBorderRadius ?? bubbleBorderRadius,
+       outgoingBubbleBorderRadius =
+           outgoingBubbleBorderRadius ?? bubbleBorderRadius;
 
   /// Creates a WhatsApp-inspired theme.
   factory SocialTransferThemeData.whatsapp({bool isDark = false}) {
@@ -384,10 +392,7 @@ class SocialTransferThemeData {
           fontWeight: FontWeight.w500,
           color: Color(0xFFE9EDEF),
         ),
-        fileSizeStyle: const TextStyle(
-          fontSize: 12,
-          color: Color(0xFF8696A0),
-        ),
+        fileSizeStyle: const TextStyle(fontSize: 12, color: Color(0xFF8696A0)),
         showEta: false,
       );
     }
@@ -430,10 +435,7 @@ class SocialTransferThemeData {
         fontWeight: FontWeight.w500,
         color: Color(0xFF111B21),
       ),
-      fileSizeStyle: const TextStyle(
-        fontSize: 12,
-        color: Color(0xFF667781),
-      ),
+      fileSizeStyle: const TextStyle(fontSize: 12, color: Color(0xFF667781)),
       showEta: false,
     );
   }
@@ -484,10 +486,7 @@ class SocialTransferThemeData {
           fontWeight: FontWeight.w500,
           color: Colors.white,
         ),
-        fileSizeStyle: const TextStyle(
-          fontSize: 13,
-          color: Color(0xFF8A8A8A),
-        ),
+        fileSizeStyle: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A)),
         showSpeed: true,
         showEta: true,
       );
@@ -543,10 +542,7 @@ class SocialTransferThemeData {
         fontWeight: FontWeight.w500,
         color: Colors.black87,
       ),
-      fileSizeStyle: const TextStyle(
-        fontSize: 13,
-        color: Color(0xFF8A8A8A),
-      ),
+      fileSizeStyle: const TextStyle(fontSize: 13, color: Color(0xFF8A8A8A)),
       showSpeed: true,
       showEta: true,
     );
@@ -589,10 +585,7 @@ class SocialTransferThemeData {
           fontWeight: FontWeight.w600,
           color: Color(0xFFFAFAFA),
         ),
-        fileSizeStyle: const TextStyle(
-          fontSize: 12,
-          color: Color(0xFFA8A8A8),
-        ),
+        fileSizeStyle: const TextStyle(fontSize: 12, color: Color(0xFFA8A8A8)),
         showLinearProgress: false,
         showCircularProgress: true,
         blurSigma: 10.0,
@@ -633,10 +626,7 @@ class SocialTransferThemeData {
         fontWeight: FontWeight.w600,
         color: Color(0xFF262626),
       ),
-      fileSizeStyle: const TextStyle(
-        fontSize: 12,
-        color: Color(0xFF8E8E8E),
-      ),
+      fileSizeStyle: const TextStyle(fontSize: 12, color: Color(0xFF8E8E8E)),
       showLinearProgress: false,
       showCircularProgress: true,
       blurSigma: 10.0,
@@ -644,7 +634,7 @@ class SocialTransferThemeData {
   }
 
   /// Creates a theme from the current [BuildContext].
-  factory SocialTransferThemeData.fromContext(BuildContext context) {
+  factory SocialTransferThemeData.of(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -652,7 +642,8 @@ class SocialTransferThemeData {
     return SocialTransferThemeData(
       primaryColor: colorScheme.primary,
       secondaryColor: colorScheme.secondary,
-      bubbleColor: isDark ? colorScheme.surfaceContainerHighest : colorScheme.surface,
+      bubbleColor:
+          isDark ? colorScheme.surfaceContainerHighest : colorScheme.surface,
       progressBackgroundColor: colorScheme.onSurface.withOpacity(0.12),
       progressForegroundColor: colorScheme.primary,
       successColor: Colors.green,
@@ -671,6 +662,7 @@ class SocialTransferThemeData {
   }
 
   /// Creates a copy with updated values.
+  @override
   SocialTransferThemeData copyWith({
     SocialSkin? skin,
     Color? primaryColor,
@@ -820,43 +812,135 @@ class SocialTransferThemeData {
       blurSigma: blurSigma ?? this.blurSigma,
     );
   }
-}
 
-/// InheritedWidget to provide [SocialTransferThemeData] to descendants.
-class SocialTransferTheme extends InheritedWidget {
-  /// The theme data.
-  final SocialTransferThemeData data;
-
-  const SocialTransferTheme({
-    super.key,
-    required this.data,
-    required super.child,
-  });
-
-  /// Gets the current theme from the context.
-  ///
-  /// If no theme is found, returns a theme based on the current [ThemeData].
-  static SocialTransferThemeData of(BuildContext context) {
-    final widget =
-        context.dependOnInheritedWidgetOfExactType<SocialTransferTheme>();
-    return widget?.data ?? SocialTransferThemeData.fromContext(context);
-  }
-
-  /// Gets the current theme or null if not found.
-  static SocialTransferThemeData? maybeOf(BuildContext context) {
-    final widget =
-        context.dependOnInheritedWidgetOfExactType<SocialTransferTheme>();
-    return widget?.data;
-  }
-
+  /// Linearly interpolate between two themes.
   @override
-  bool updateShouldNotify(SocialTransferTheme oldWidget) {
-    return data != oldWidget.data;
+  SocialTransferThemeData lerp(
+    covariant SocialTransferThemeData? other,
+    double t,
+  ) {
+    if (other == null) return this;
+    return SocialTransferThemeData(
+      skin: t < 0.5 ? skin : other.skin,
+      primaryColor: Color.lerp(primaryColor, other.primaryColor, t)!,
+      secondaryColor: Color.lerp(secondaryColor, other.secondaryColor, t)!,
+      bubbleColor: Color.lerp(bubbleColor, other.bubbleColor, t)!,
+      incomingBubbleColor:
+          Color.lerp(incomingBubbleColor, other.incomingBubbleColor, t)!,
+      outgoingBubbleColor:
+          Color.lerp(outgoingBubbleColor, other.outgoingBubbleColor, t)!,
+      progressBackgroundColor:
+          Color.lerp(
+            progressBackgroundColor,
+            other.progressBackgroundColor,
+            t,
+          )!,
+      progressForegroundColor:
+          Color.lerp(
+            progressForegroundColor,
+            other.progressForegroundColor,
+            t,
+          )!,
+      successColor: Color.lerp(successColor, other.successColor, t)!,
+      errorColor: Color.lerp(errorColor, other.errorColor, t)!,
+      warningColor: Color.lerp(warningColor, other.warningColor, t)!,
+      pausedColor: Color.lerp(pausedColor, other.pausedColor, t)!,
+      textColor: Color.lerp(textColor, other.textColor, t)!,
+      subtitleColor: Color.lerp(subtitleColor, other.subtitleColor, t)!,
+      iconColor: Color.lerp(iconColor, other.iconColor, t)!,
+      overlayColor: Color.lerp(overlayColor, other.overlayColor, t)!,
+      bubbleBorderRadius:
+          BorderRadius.lerp(bubbleBorderRadius, other.bubbleBorderRadius, t)!,
+      incomingBubbleBorderRadius:
+          BorderRadius.lerp(
+            incomingBubbleBorderRadius,
+            other.incomingBubbleBorderRadius,
+            t,
+          )!,
+      outgoingBubbleBorderRadius:
+          BorderRadius.lerp(
+            outgoingBubbleBorderRadius,
+            other.outgoingBubbleBorderRadius,
+            t,
+          )!,
+      progressBorderRadius:
+          BorderRadius.lerp(
+            progressBorderRadius,
+            other.progressBorderRadius,
+            t,
+          )!,
+      buttonBorderRadius:
+          BorderRadius.lerp(buttonBorderRadius, other.buttonBorderRadius, t)!,
+      thumbnailBorderRadius:
+          BorderRadius.lerp(
+            thumbnailBorderRadius,
+            other.thumbnailBorderRadius,
+            t,
+          )!,
+      bubbleBorder: t < 0.5 ? bubbleBorder : other.bubbleBorder,
+      bubbleShadow: t < 0.5 ? bubbleShadow : other.bubbleShadow,
+      actionButtonSize:
+          lerpDouble(actionButtonSize, other.actionButtonSize, t)!,
+      smallIconSize: lerpDouble(smallIconSize, other.smallIconSize, t)!,
+      mediumIconSize: lerpDouble(mediumIconSize, other.mediumIconSize, t)!,
+      largeIconSize: lerpDouble(largeIconSize, other.largeIconSize, t)!,
+      progressStrokeWidth:
+          lerpDouble(progressStrokeWidth, other.progressStrokeWidth, t)!,
+      linearProgressHeight:
+          lerpDouble(linearProgressHeight, other.linearProgressHeight, t)!,
+      maxBubbleWidth: lerpDouble(maxBubbleWidth, other.maxBubbleWidth, t)!,
+      minBubbleWidth: lerpDouble(minBubbleWidth, other.minBubbleWidth, t)!,
+      bubblePadding: EdgeInsets.lerp(bubblePadding, other.bubblePadding, t)!,
+      bubbleMargin: EdgeInsets.lerp(bubbleMargin, other.bubbleMargin, t)!,
+      contentPadding: EdgeInsets.lerp(contentPadding, other.contentPadding, t)!,
+      fileNameStyle: TextStyle.lerp(fileNameStyle, other.fileNameStyle, t),
+      fileSizeStyle: TextStyle.lerp(fileSizeStyle, other.fileSizeStyle, t),
+      progressStyle: TextStyle.lerp(progressStyle, other.progressStyle, t),
+      statusStyle: TextStyle.lerp(statusStyle, other.statusStyle, t),
+      speedStyle: TextStyle.lerp(speedStyle, other.speedStyle, t),
+      durationStyle: TextStyle.lerp(durationStyle, other.durationStyle, t),
+      errorStyle: TextStyle.lerp(errorStyle, other.errorStyle, t),
+      downloadIcon: t < 0.5 ? downloadIcon : other.downloadIcon,
+      uploadIcon: t < 0.5 ? uploadIcon : other.uploadIcon,
+      pauseIcon: t < 0.5 ? pauseIcon : other.pauseIcon,
+      resumeIcon: t < 0.5 ? resumeIcon : other.resumeIcon,
+      cancelIcon: t < 0.5 ? cancelIcon : other.cancelIcon,
+      retryIcon: t < 0.5 ? retryIcon : other.retryIcon,
+      playIcon: t < 0.5 ? playIcon : other.playIcon,
+      fileIcon: t < 0.5 ? fileIcon : other.fileIcon,
+      documentIcon: t < 0.5 ? documentIcon : other.documentIcon,
+      imageIcon: t < 0.5 ? imageIcon : other.imageIcon,
+      videoIcon: t < 0.5 ? videoIcon : other.videoIcon,
+      audioIcon: t < 0.5 ? audioIcon : other.audioIcon,
+      successIcon: t < 0.5 ? successIcon : other.successIcon,
+      errorIcon: t < 0.5 ? errorIcon : other.errorIcon,
+      progressAnimationDuration:
+          t < 0.5 ? progressAnimationDuration : other.progressAnimationDuration,
+      progressAnimationCurve:
+          t < 0.5 ? progressAnimationCurve : other.progressAnimationCurve,
+      stateAnimationDuration:
+          t < 0.5 ? stateAnimationDuration : other.stateAnimationDuration,
+      stateAnimationCurve:
+          t < 0.5 ? stateAnimationCurve : other.stateAnimationCurve,
+      showFileSize: t < 0.5 ? showFileSize : other.showFileSize,
+      showSpeed: t < 0.5 ? showSpeed : other.showSpeed,
+      showEta: t < 0.5 ? showEta : other.showEta,
+      showProgressPercent:
+          t < 0.5 ? showProgressPercent : other.showProgressPercent,
+      showLinearProgress:
+          t < 0.5 ? showLinearProgress : other.showLinearProgress,
+      showCircularProgress:
+          t < 0.5 ? showCircularProgress : other.showCircularProgress,
+      useBlurOverlay: t < 0.5 ? useBlurOverlay : other.useBlurOverlay,
+      blurSigma: lerpDouble(blurSigma, other.blurSigma, t)!,
+    );
   }
 }
 
 /// Extension to easily access theme from context.
 extension SocialTransferThemeContext on BuildContext {
   /// Gets the social transfer theme.
-  SocialTransferThemeData get socialTransferTheme => SocialTransferTheme.of(this);
+  SocialTransferThemeData get socialTransferTheme =>
+      Theme.of(this).extension<SocialTransferThemeData>() ??
+      SocialTransferThemeData.of(this);
 }

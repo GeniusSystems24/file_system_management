@@ -9,10 +9,7 @@ import '../providers/mock_transfer_provider.dart';
 class ChatDemoScreen extends StatefulWidget {
   final SocialSkin currentSkin;
 
-  const ChatDemoScreen({
-    super.key,
-    required this.currentSkin,
-  });
+  const ChatDemoScreen({super.key, required this.currentSkin});
 
   @override
   State<ChatDemoScreen> createState() => _ChatDemoScreenState();
@@ -93,9 +90,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.incoming,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 256 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 256 * 1024,
+                ),
           ),
         ),
 
@@ -134,9 +132,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.incoming,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockSlowTransfer(
-              totalBytes: payload.expectedSize ?? 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockSlowTransfer(
+                  totalBytes: payload.expectedSize ?? 1024 * 1024,
+                ),
           ),
         ),
       ],
@@ -163,9 +162,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.incoming,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 2 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 2 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -187,9 +187,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.outgoing,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 3 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 3 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -238,9 +239,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.incoming,
             ),
-            onDownload: (payload) => _mockProvider.mockSlowTransfer(
-              totalBytes: payload.expectedSize ?? 15 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockSlowTransfer(
+                  totalBytes: payload.expectedSize ?? 15 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -262,9 +264,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.outgoing,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 8 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 8 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -310,9 +313,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.incoming,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 25 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 25 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -329,9 +333,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.outgoing,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockSlowTransfer(
-              totalBytes: payload.expectedSize ?? 45 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockSlowTransfer(
+                  totalBytes: payload.expectedSize ?? 45 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -348,9 +353,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.incoming,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockFailingTransfer(
-              totalBytes: payload.expectedSize ?? 100 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockFailingTransfer(
+                  totalBytes: payload.expectedSize ?? 100 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -368,7 +374,7 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.outgoing,
             ),
-            onOpen: (path) => _showSnackBar('Opening file...'),
+            onOpen: (path) async => _showSnackBar('Opening file...'),
           ),
         ),
       ],
@@ -393,9 +399,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.incoming,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 5 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 5 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -413,9 +420,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.outgoing,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 2 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 2 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -432,9 +440,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
               direction: BubbleDirection.incoming,
               autoStart: true,
             ),
-            onDownload: (payload) => _mockProvider.mockDownload(
-              totalBytes: payload.expectedSize ?? 1 * 1024 * 1024,
-            ),
+            onDownload:
+                (payload) => _mockProvider.mockDownload(
+                  totalBytes: payload.expectedSize ?? 1 * 1024 * 1024,
+                ),
           ),
         ),
 
@@ -453,7 +462,7 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
             config: const TransferWidgetConfig(
               direction: BubbleDirection.outgoing,
             ),
-            onOpen: (path) => _showSnackBar('Opening presentation...'),
+            onOpen: (path) async => _showSnackBar('Opening presentation...'),
           ),
         ),
       ],
@@ -465,9 +474,9 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -477,9 +486,10 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
     required Widget child,
   }) {
     return Align(
-      alignment: direction == BubbleDirection.outgoing
-          ? AlignmentDirectional.centerEnd
-          : AlignmentDirectional.centerStart,
+      alignment:
+          direction == BubbleDirection.outgoing
+              ? AlignmentDirectional.centerEnd
+              : AlignmentDirectional.centerStart,
       child: child,
     );
   }
@@ -520,10 +530,7 @@ class _ChatDemoScreenState extends State<ChatDemoScreen>
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
 }

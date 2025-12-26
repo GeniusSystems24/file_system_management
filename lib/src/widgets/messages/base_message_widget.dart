@@ -164,12 +164,10 @@ abstract class BaseMessageTransferWidget extends StatefulWidget {
   final TransferWidgetState? initialState;
 
   /// Callback for upload.
-  final Stream<TransferProgress> Function(UploadPayload payload)?
-      onUpload;
+  final Stream<TransferProgress> Function(UploadPayload payload)? onUpload;
 
   /// Callback for download.
-  final Stream<TransferProgress> Function(DownloadPayload payload)?
-      onDownload;
+  final Stream<TransferProgress> Function(DownloadPayload payload)? onDownload;
 
   /// Callback for retry.
   final Stream<TransferProgress> Function()? onRetry;
@@ -240,8 +238,11 @@ abstract class BaseMessageTransferWidget extends StatefulWidget {
 }
 
 /// Base state class for message transfer widgets.
-abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidget>
-    extends State<T> with SingleTickerProviderStateMixin {
+abstract class BaseMessageTransferWidgetState<
+  T extends BaseMessageTransferWidget
+>
+    extends State<T>
+    with SingleTickerProviderStateMixin {
   /// Current state of the widget.
   TransferWidgetState _state = TransferWidgetState.idle;
   TransferWidgetState get state => _state;
@@ -272,7 +273,9 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
 
   /// Gets the current theme.
   SocialTransferThemeData get theme =>
-      widget.themeData ?? SocialTransferTheme.of(context);
+      widget.themeData ??
+      Theme.of(context).extension<SocialTransferThemeData>() ??
+      SocialTransferThemeData.of(context);
 
   /// Gets the effective action button size.
   double get actionButtonSize =>
@@ -284,7 +287,9 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
 
     _animationController = AnimationController(
       vsync: this,
-      duration: theme.stateAnimationDuration,
+      duration: const Duration(
+        milliseconds: 300,
+      ), // Default, updated in didChangeDependencies
     );
 
     if (widget.initialState != null) {
@@ -306,6 +311,13 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update animation duration from theme (can't be done in initState)
+    _animationController.duration = theme.stateAnimationDuration;
+  }
+
+  @override
   void dispose() {
     _progressSubscription?.cancel();
     _internalToken?.dispose();
@@ -319,9 +331,7 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
 
     setState(() {
       _state = TransferWidgetState.transferring;
-      _progress = TransferProgress.initial(
-        totalBytes: widget.fileSize ?? -1,
-      );
+      _progress = TransferProgress.initial(totalBytes: widget.fileSize ?? -1);
       _errorMessage = null;
     });
 
@@ -332,20 +342,24 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
 
       // Try custom callbacks first
       if (isUpload && widget.onUpload != null) {
-        stream = widget.onUpload!(UploadPayload(
-          filePath: widget.filePath,
-          fileName: widget.fileName ?? 'file',
-          fileSize: widget.fileSize,
-          mimeType: widget.mimeType,
-        ));
+        stream = widget.onUpload!(
+          UploadPayload(
+            filePath: widget.filePath,
+            fileName: widget.fileName ?? 'file',
+            fileSize: widget.fileSize,
+            mimeType: widget.mimeType,
+          ),
+        );
       } else if (!isUpload && widget.onDownload != null) {
         final url = await _getUrl();
-        stream = widget.onDownload!(DownloadPayload(
-          url: url,
-          destinationPath: widget.filePath,
-          fileName: widget.fileName,
-          expectedSize: widget.fileSize,
-        ));
+        stream = widget.onDownload!(
+          DownloadPayload(
+            url: url,
+            destinationPath: widget.filePath,
+            fileName: widget.fileName,
+            expectedSize: widget.fileSize,
+          ),
+        );
       }
       // Fall back to handlers
       else if (isUpload && widget.uploadHandler != null) {
@@ -423,11 +437,13 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
     widget.onProgressUpdate?.call(progress);
 
     if (progress.isCompleted) {
-      widget.onTransferComplete?.call(TransferSuccess(
-        localPath: _resultPath ?? widget.filePath ?? '',
-        remoteUrl: widget.url,
-        fileSize: widget.fileSize,
-      ));
+      widget.onTransferComplete?.call(
+        TransferSuccess(
+          localPath: _resultPath ?? widget.filePath ?? '',
+          remoteUrl: widget.url,
+          fileSize: widget.fileSize,
+        ),
+      );
     }
   }
 
@@ -435,9 +451,10 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
   void _handleError(Object error) {
     if (!mounted) return;
 
-    final failure = error is TransferFailure
-        ? error
-        : TransferFailure(message: error.toString());
+    final failure =
+        error is TransferFailure
+            ? error
+            : TransferFailure(message: error.toString());
 
     setState(() {
       _state = TransferWidgetState.failed;
@@ -481,15 +498,18 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
       }
 
       final bytesTransferred = (totalBytes * i / steps).round();
-      _handleProgress(TransferProgress(
-        bytesTransferred: bytesTransferred,
-        totalBytes: totalBytes,
-        bytesPerSecond: totalBytes / duration.inSeconds,
-        estimatedTimeRemaining: Duration(
-          milliseconds: ((steps - i) * stepDuration.inMilliseconds),
+      _handleProgress(
+        TransferProgress(
+          bytesTransferred: bytesTransferred,
+          totalBytes: totalBytes,
+          bytesPerSecond: totalBytes / duration.inSeconds,
+          estimatedTimeRemaining: Duration(
+            milliseconds: ((steps - i) * stepDuration.inMilliseconds),
+          ),
+          status:
+              i == steps ? TransferStatus.completed : TransferStatus.running,
         ),
-        status: i == steps ? TransferStatus.completed : TransferStatus.running,
-      ));
+      );
     }
   }
 
@@ -606,7 +626,8 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
   /// Gets the icon for the current state.
   IconData getStateIcon() {
     return switch (_state) {
-      TransferWidgetState.idle => isUpload ? theme.uploadIcon : theme.downloadIcon,
+      TransferWidgetState.idle =>
+        isUpload ? theme.uploadIcon : theme.downloadIcon,
       TransferWidgetState.pending => Icons.hourglass_empty,
       TransferWidgetState.transferring =>
         widget.config.allowPauseResume ? theme.pauseIcon : theme.cancelIcon,
@@ -635,7 +656,8 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
     return switch (_state) {
       TransferWidgetState.idle => isUpload ? 'جاهز للرفع' : 'جاهز للتحميل',
       TransferWidgetState.pending => 'في الانتظار...',
-      TransferWidgetState.transferring => isUpload ? 'جاري الرفع...' : 'جاري التحميل...',
+      TransferWidgetState.transferring =>
+        isUpload ? 'جاري الرفع...' : 'جاري التحميل...',
       TransferWidgetState.paused => 'متوقف مؤقتاً',
       TransferWidgetState.completed => 'مكتمل',
       TransferWidgetState.failed => 'فشل - ${_errorMessage ?? "خطأ غير معروف"}',
@@ -681,7 +703,8 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
   Widget buildProgressInfo() {
     final parts = <String>[];
 
-    if (widget.config.showProgress && _state == TransferWidgetState.transferring) {
+    if (widget.config.showProgress &&
+        _state == TransferWidgetState.transferring) {
       parts.add(_progress.progressText);
     }
 
@@ -695,7 +718,9 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
 
     if (widget.config.showFileSize) {
       if (_state == TransferWidgetState.transferring) {
-        parts.add('${_progress.bytesTransferredText} / ${_progress.totalBytesText}');
+        parts.add(
+          '${_progress.bytesTransferredText} / ${_progress.totalBytesText}',
+        );
       } else if (widget.fileSize != null && widget.fileSize! > 0) {
         parts.add(_formatBytes(widget.fileSize!));
       }
@@ -705,11 +730,9 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
 
     return Text(
       parts.join(' • '),
-      style: theme.fileSizeStyle ??
-          TextStyle(
-            fontSize: 12,
-            color: theme.subtitleColor,
-          ),
+      style:
+          theme.fileSizeStyle ??
+          TextStyle(fontSize: 12, color: theme.subtitleColor),
     );
   }
 
@@ -759,11 +782,9 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
           Flexible(
             child: Text(
               _errorMessage!,
-              style: theme.errorStyle ??
-                  TextStyle(
-                    fontSize: 12,
-                    color: theme.errorColor,
-                  ),
+              style:
+                  theme.errorStyle ??
+                  TextStyle(fontSize: 12, color: theme.errorColor),
             ),
           ),
         ],
@@ -792,9 +813,7 @@ abstract class BaseMessageTransferWidgetState<T extends BaseMessageTransferWidge
                   sigmaX: theme.blurSigma,
                   sigmaY: theme.blurSigma,
                 ),
-                child: Container(
-                  color: theme.overlayColor,
-                ),
+                child: Container(color: theme.overlayColor),
               ),
             ),
           ),

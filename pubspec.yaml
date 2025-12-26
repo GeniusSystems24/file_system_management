@@ -1,7 +1,6 @@
 name: file_system_management
 description: "A Flutter package for managing file download and upload tasks with progress tracking, customizable handlers, and social media-inspired UI widgets."
 version: 0.2.0
-publish_to: none
 
 environment:
   sdk: ^3.7.0

@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../theme/social_transfer_theme.dart';
 import 'base_message_widget.dart';
 
 /// A widget for displaying document message transfers.

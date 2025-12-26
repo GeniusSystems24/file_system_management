@@ -44,11 +44,15 @@
 ///
 /// ## Theming:
 /// ```dart
-/// // Apply WhatsApp-like skin
-/// SocialTransferTheme(
-///   data: SocialTransferThemeData.whatsapp(),
-///   child: MyApp(),
+/// // Apply WhatsApp-like theme using ThemeData.extensions
+/// MaterialApp(
+///   theme: ThemeData(
+///     extensions: [SocialTransferThemeData.whatsapp()],
+///   ),
 /// )
+///
+/// // Access theme in widgets:
+/// final theme = context.socialTransferTheme;
 /// ```
 library;
 
