@@ -1,5 +1,7 @@
 name: file_system_management
-description: "A Flutter package for managing file download and upload tasks with progress tracking, customizable handlers, and social media-inspired UI widgets."
+description: "A Flutter package for managing file download and upload tasks with
+  progress tracking, customizable handlers, and social media-inspired UI
+  widgets."
 version: 0.2.0
 homepage: https://github.com/GeniusSystems24/file_system_management
 repository: https://github.com/GeniusSystems24/file_system_management
@@ -11,16 +13,17 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
   background_downloader: ^8.5.5
   cached_network_image: ^3.4.1
+  collection: ^1.19.1
   crypto: ^3.0.6
   dashed_circular_progress_bar: ^0.0.6
+  flutter:
+    sdk: flutter
   path: ^1.9.1
   path_provider: ^2.1.5
 
 dev_dependencies:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
