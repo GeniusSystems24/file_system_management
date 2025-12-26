@@ -1,195 +1,500 @@
 import 'dart:async';
 
 import 'package:background_downloader/background_downloader.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../core/extensions/file_path_extension.dart';
-import '../models/notifier.dart';
-import '../models/task_item.dart';
+import '../core/file_cache_manager.dart';
+import '../core/task_mutex.dart';
+import '../models/transfer_item.dart';
 
-/// Controller for managing file download tasks with progress tracking and notifications.
+/// Result of an enqueue operation.
+sealed class EnqueueResult {}
+
+/// Task was found in cache - file already exists locally.
+class EnqueueCached extends EnqueueResult {
+  final String filePath;
+  EnqueueCached(this.filePath);
+}
+
+/// Task is already in progress - returns existing stream.
+class EnqueueInProgress extends EnqueueResult {
+  final StreamController<TransferItem> controller;
+  EnqueueInProgress(this.controller);
+}
+
+/// Task was newly enqueued - returns new stream.
+class EnqueueStarted extends EnqueueResult {
+  final StreamController<TransferItem> controller;
+  EnqueueStarted(this.controller);
+}
+
+/// Task was not started because autoStart was false.
+class EnqueuePending extends EnqueueResult {
+  final StreamController<TransferItem> controller;
+  EnqueuePending(this.controller);
+}
+
+/// Controller for managing file download and upload tasks.
+///
+/// Features:
+/// - Singleton pattern for global access
+/// - Mutex-based locking to prevent duplicate operations
+/// - Automatic cache management
+/// - Stream-based progress updates
+/// - Proper resource cleanup
 class FileSystemController {
-  bool isInitialized = false;
-  FileDownloader get fileDownloader => FileDownloader();
-  final Map<String, String> _filePaths = {};
-  final Map<String, TaskItem> fileUpdates = {};
-  final Set<String> _taskUrlsInQueue = {};
-  final MapNotifier<String, StreamController<TaskItem>> _fileControllers =
-      MapNotifier<String, StreamController<TaskItem>>({});
-
-  // Singleton pattern
+  // Singleton
   static final FileSystemController instance = FileSystemController._internal();
   factory FileSystemController() => instance;
   FileSystemController._internal();
 
-  /// file stream controller get
-  StreamController<TaskItem>? getFileController(String url) =>
-      _fileControllers.value[url];
+  // State
+  bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
 
-  /// file stream controller create
-  StreamController<TaskItem> createFileController(String url) {
-    var controller = getFileController(url);
-    controller ??= _fileControllers.add(
-      url,
-      StreamController<TaskItem>.broadcast(),
-    );
+  // Core downloader
+  FileDownloader get _fileDownloader => FileDownloader();
 
-    return controller;
+  // Mutex for thread-safe operations
+  final _mutex = TaskMutex();
+
+  // Cache: URL -> completed file path
+  final Map<String, String> _completedPaths = {};
+
+  // Active transfers: URL -> TransferItem
+  final Map<String, TransferItem> _activeTransfers = {};
+
+  // Stream controllers: URL -> StreamController
+  final Map<String, StreamController<TransferItem>> _streamControllers = {};
+
+  // Active task URLs (to prevent duplicate enqueues)
+  final Set<String> _activeTaskUrls = {};
+
+  // Subscriptions
+  StreamSubscription<TaskUpdate>? _updatesSubscription;
+
+  /// Gets all active transfers.
+  Map<String, TransferItem> get activeTransfers =>
+      Map.unmodifiable(_activeTransfers);
+
+  /// Gets all completed file paths.
+  Map<String, String> get completedPaths => Map.unmodifiable(_completedPaths);
+
+  /// Gets a transfer item by URL.
+  TransferItem? getTransfer(String url) => _activeTransfers[url];
+
+  /// Gets the cached path for a URL.
+  String? getCachedPath(String url) => _completedPaths[url];
+
+  /// Checks if a URL is currently being processed.
+  bool isProcessing(String url) => _activeTaskUrls.contains(url);
+
+  /// Checks if a URL has been completed.
+  bool isCompleted(String url) => _completedPaths.containsKey(url);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INITIALIZATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Initializes the controller.
+  ///
+  /// Must be called before any other operations.
+  /// Safe to call multiple times - will only initialize once.
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    // Configure notifications
+    _configureNotifications();
+
+    // Load previous records from database FIRST (wait for it!)
+    await _loadPreviousRecords();
+
+    // Listen to updates
+    _updatesSubscription = _fileDownloader.updates.listen(_handleTaskUpdate);
+
+    // Start tracking
+    await _fileDownloader.trackTasks();
+    _fileDownloader.start();
+
+    _isInitialized = true;
+    debugPrint('FileSystemController: Initialized');
   }
 
-  // Initialize the controller and setup listeners
-  Future<void> initialize() async {
-    if (isInitialized) return;
-    isInitialized = true;
-
-    // Registering a callback and configure notifications
-    FileDownloader()
+  void _configureNotifications() {
+    _fileDownloader
         .registerCallbacks(
-          taskNotificationTapCallback: myNotificationTapCallback,
+          taskNotificationTapCallback: _onNotificationTap,
         )
         .configureNotificationForGroup(
           FileDownloader.defaultGroup,
-          // For the main download button
-          // which uses 'enqueue' and a default group
           running: const TaskNotification(
-            'Download {filename}',
-            'File: {filename} - {progress} - speed {networkSpeed} and {timeRemaining} remaining',
+            'تحميل {filename}',
+            '{progress} - {networkSpeed}',
           ),
           complete: const TaskNotification(
-            '{displayName} download {filename}',
-            'Download complete',
+            'اكتمل تحميل {filename}',
+            'انقر لفتح الملف',
           ),
           error: const TaskNotification(
-            'Download {filename}',
-            'Download failed',
+            'فشل تحميل {filename}',
+            'انقر لإعادة المحاولة',
           ),
           paused: const TaskNotification(
-            'Download {filename}',
-            'Paused with metadata {metadata}',
+            'تم إيقاف {filename}',
+            '{progress} مكتمل',
           ),
-          // canceled: const TaskNotification('Download {filename}', 'Canceled'),
-          progressBar: false,
-        )
-        .configureNotificationForGroup(
-          'bunch',
-          running: const TaskNotification(
-            '{numFinished} out of {numTotal}',
-            'Progress = {progress}',
-          ),
-          complete: const TaskNotification("Done!", "Loaded {numTotal} files"),
-          error: const TaskNotification(
-            'Error',
-            '{numFailed}/{numTotal} failed',
-          ),
-          progressBar: false,
-          groupNotificationId: 'notGroup',
-        )
-        .configureNotification(
-          // for the 'Download & Open' dog picture
-          // which uses 'download' which is not the .defaultGroup
-          // but the .await group so won't use the above config
-          complete: const TaskNotification(
-            'Download {filename}',
-            'Download complete',
-          ),
-          tapOpensFile: false,
-        ); // dog can also open directly from tap
+          progressBar: true,
+        );
+  }
 
-    fileDownloader.database.allRecords().then((records) {
+  Future<void> _loadPreviousRecords() async {
+    try {
+      final records = await _fileDownloader.database.allRecords();
       for (final record in records) {
-        _addTaskItem(TaskItem.fromRecord(record));
+        final item = TransferItem.fromRecord(record);
+        _addTransferItem(item);
       }
-    });
-
-    fileDownloader.updates.listen((update) {
-      _addTaskItem(update);
-    });
-
-    // Start the library with database tracking
-    await fileDownloader.trackTasks();
-    fileDownloader.start();
+      debugPrint(
+          'FileSystemController: Loaded ${records.length} previous records');
+    } catch (e) {
+      debugPrint('FileSystemController: Error loading records: $e');
+    }
   }
 
-  void _addTaskItem(TaskUpdate taskUpdate) {
-    var taskItem = fileUpdates[taskUpdate.task.url];
-    if (taskItem != null) taskItem = taskItem.copyWithUpdate(taskUpdate);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STREAM MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════════════════
 
-    taskItem ??= TaskItem.fromUpdate(taskUpdate);
+  /// Gets or creates a stream controller for a URL.
+  StreamController<TransferItem> _getOrCreateController(String url) {
+    return _streamControllers.putIfAbsent(
+      url,
+      () => StreamController<TransferItem>.broadcast(),
+    );
+  }
 
-    if (taskItem.progress == 1.0) {
-      _filePaths[taskItem.url] = taskItem.filePath;
+  /// Gets the stream for a URL (read-only).
+  Stream<TransferItem>? getStream(String url) {
+    return _streamControllers[url]?.stream;
+  }
+
+  /// Cleans up a stream controller for a URL.
+  void _cleanupController(String url) {
+    final controller = _streamControllers.remove(url);
+    controller?.close();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TASK UPDATE HANDLING
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  void _handleTaskUpdate(TaskUpdate update) {
+    final url = update.task.url;
+    var item = _activeTransfers[url];
+
+    if (item != null) {
+      item = item.copyWithUpdate(update);
+    } else {
+      item = TransferItem.fromUpdate(update);
     }
 
-    fileUpdates[taskItem.url] = taskItem;
-    createFileController(taskItem.url).add(taskItem);
-  }
+    _addTransferItem(item);
 
-  Future<(String? filePath, StreamController<TaskItem>? streamController)>
-  enqueueOrResume(Task task, bool autoStart) async {
-    final filePath = _filePaths[task.url];
-
-    if (filePath != null) return (filePath, null);
-
-    final taskItem = fileUpdates[task.url];
-    var streamController = createFileController(task.url);
-    if (taskItem != null) return (null, streamController);
-
-    if (autoStart && !_taskUrlsInQueue.contains(task.url)) {
-      _taskUrlsInQueue.add(task.url);
-      await fileDownloader.enqueue(task);
+    // Handle completion
+    if (item.isComplete) {
+      _onTaskCompleted(item);
     }
 
-    return (null, streamController);
+    // Handle failure/cancellation - cleanup queue
+    if (item.isFailed || item.status == TaskStatus.canceled) {
+      _activeTaskUrls.remove(url);
+    }
   }
 
-  Future<bool> pause(TaskItem taskItem) async {
-    final task = taskItem.task;
-    if (task is! DownloadTask) return false;
+  void _addTransferItem(TransferItem item) {
+    final url = item.url;
 
-    return await fileDownloader.pause(task);
+    // Store in active transfers
+    _activeTransfers[url] = item;
+
+    // Cache completed paths
+    if (item.isComplete) {
+      _completedPaths[url] = item.filePath;
+      fileCacheManager.put(url, item.filePath, fileSize: item.expectedFileSize);
+    }
+
+    // Broadcast update
+    _getOrCreateController(url).add(item);
   }
 
-  Future<bool> resume(TaskItem taskItem) async {
-    final task = taskItem.task;
-    if (task is! DownloadTask) return false;
+  void _onTaskCompleted(TransferItem item) {
+    final url = item.url;
 
-    return await fileDownloader.resume(task);
+    // Remove from active queue
+    _activeTaskUrls.remove(url);
+
+    debugPrint('FileSystemController: Task completed - ${item.filename}');
   }
 
-  Future<bool> openFile(TaskItem taskItem) async {
-    final task = taskItem.task;
-    if (task is! DownloadTask) return false;
+  void _onNotificationTap(Task task, NotificationType notificationType) {
+    final item = _activeTransfers[task.url];
+    if (item == null) return;
 
-    return await fileDownloader.openFile(task: task);
+    switch (notificationType) {
+      case NotificationType.complete:
+        openFile(item);
+        break;
+      case NotificationType.error:
+        // Could trigger retry
+        break;
+      default:
+        break;
+    }
   }
 
-  Future<void> deleteFile(TaskItem taskItem) async {
-    final task = taskItem.task;
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DOWNLOAD OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
 
-    await fileDownloader.database.deleteRecordWithId(task.taskId);
-    _filePaths.remove(task.url);
-    fileUpdates.remove(task.url);
-    _fileControllers.value.remove(task.url);
+  /// Enqueues a download task or returns cached/in-progress result.
+  ///
+  /// This method is thread-safe and prevents duplicate downloads.
+  ///
+  /// Returns:
+  /// - [EnqueueCached] if the file is already downloaded
+  /// - [EnqueueInProgress] if the download is already in progress
+  /// - [EnqueueStarted] if a new download was started
+  /// - [EnqueuePending] if autoStart is false and task wasn't started
+  Future<EnqueueResult> enqueueDownload(
+    Task task, {
+    bool autoStart = true,
+  }) async {
+    final url = task.url;
+
+    // Use mutex to prevent race conditions
+    return await _mutex.synchronized(url, () async {
+      // Check cache first
+      final cachedPath = _completedPaths[url];
+      if (cachedPath != null) {
+        debugPrint('FileSystemController: Cache hit for $url');
+        return EnqueueCached(cachedPath);
+      }
+
+      // Check if already in progress
+      if (_activeTaskUrls.contains(url)) {
+        debugPrint('FileSystemController: Already in progress - $url');
+        return EnqueueInProgress(_getOrCreateController(url));
+      }
+
+      // Check if we have an existing transfer that's not complete
+      final existingTransfer = _activeTransfers[url];
+      if (existingTransfer != null && !existingTransfer.isComplete) {
+        return EnqueueInProgress(_getOrCreateController(url));
+      }
+
+      // Mark as active
+      _activeTaskUrls.add(url);
+
+      final controller = _getOrCreateController(url);
+
+      if (autoStart) {
+        try {
+          await _fileDownloader.enqueue(task);
+          debugPrint('FileSystemController: Enqueued download - ${task.url}');
+          return EnqueueStarted(controller);
+        } catch (e) {
+          _activeTaskUrls.remove(url);
+          debugPrint('FileSystemController: Enqueue failed - $e');
+          rethrow;
+        }
+      }
+
+      return EnqueuePending(controller);
+    });
   }
 
-  // Settings operations
+  /// Legacy method for compatibility - use [enqueueDownload] instead.
+  @Deprecated('Use enqueueDownload instead')
+  Future<(String? filePath, StreamController<TransferItem>? streamController)>
+      enqueueOrResume(Task task, bool autoStart) async {
+    final result = await enqueueDownload(task, autoStart: autoStart);
+
+    return switch (result) {
+      EnqueueCached(:final filePath) => (filePath, null),
+      EnqueueInProgress(:final controller) => (null, controller),
+      EnqueueStarted(:final controller) => (null, controller),
+      EnqueuePending(:final controller) => (null, controller),
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UPLOAD OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Enqueues an upload task.
+  Future<EnqueueResult> enqueueUpload(
+    UploadTask task, {
+    bool autoStart = true,
+  }) async {
+    final url = task.url;
+
+    return await _mutex.synchronized(url, () async {
+      // Check if already in progress
+      if (_activeTaskUrls.contains(url)) {
+        return EnqueueInProgress(_getOrCreateController(url));
+      }
+
+      _activeTaskUrls.add(url);
+      final controller = _getOrCreateController(url);
+
+      if (autoStart) {
+        try {
+          await _fileDownloader.enqueue(task);
+          debugPrint('FileSystemController: Enqueued upload - ${task.url}');
+          return EnqueueStarted(controller);
+        } catch (e) {
+          _activeTaskUrls.remove(url);
+          rethrow;
+        }
+      }
+
+      return EnqueuePending(controller);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONTROL OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Pauses a transfer.
+  Future<bool> pause(TransferItem item) async {
+    if (!item.canPause) return false;
+
+    final task = item.task;
+    if (task is DownloadTask) {
+      return await _fileDownloader.pause(task);
+    }
+    return false;
+  }
+
+  /// Resumes a transfer.
+  Future<bool> resume(TransferItem item) async {
+    if (!item.canResume) return false;
+
+    final task = item.task;
+    if (task is DownloadTask) {
+      return await _fileDownloader.resume(task);
+    }
+    return false;
+  }
+
+  /// Cancels a transfer.
+  Future<bool> cancel(TransferItem item) async {
+    final result = await _fileDownloader.cancelTaskWithId(item.taskId);
+    if (result) {
+      _activeTaskUrls.remove(item.url);
+    }
+    return result;
+  }
+
+  /// Retries a failed transfer.
+  Future<bool> retry(TransferItem item) async {
+    if (!item.isFailed) return false;
+
+    final task = item.task;
+    _activeTaskUrls.remove(item.url);
+
+    if (task is DownloadTask) {
+      final result = await enqueueDownload(task, autoStart: true);
+      return result is EnqueueStarted;
+    } else if (task is UploadTask) {
+      final result = await enqueueUpload(task, autoStart: true);
+      return result is EnqueueStarted;
+    }
+    return false;
+  }
+
+  /// Opens a completed file.
+  Future<bool> openFile(TransferItem item) async {
+    if (!item.isComplete) return false;
+
+    final task = item.task;
+    if (task is DownloadTask) {
+      return await _fileDownloader.openFile(task: task);
+    }
+    return false;
+  }
+
+  /// Deletes a transfer and its file.
+  Future<void> deleteTransfer(TransferItem item) async {
+    final url = item.url;
+    final task = item.task;
+
+    // Remove from database
+    await _fileDownloader.database.deleteRecordWithId(task.taskId);
+
+    // Remove from memory
+    _completedPaths.remove(url);
+    _activeTransfers.remove(url);
+    _activeTaskUrls.remove(url);
+
+    // Cleanup controller
+    _cleanupController(url);
+
+    // Remove from cache
+    fileCacheManager.remove(url);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BATCH OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Pauses multiple transfers.
+  Future<List<bool>> pauseAll(List<TransferItem> items) async {
+    return Future.wait(items.map((item) => pause(item)));
+  }
+
+  /// Resumes multiple transfers.
+  Future<List<bool>> resumeAll(List<TransferItem> items) async {
+    return Future.wait(items.map((item) => resume(item)));
+  }
+
+  /// Cancels multiple transfers.
+  Future<bool> cancelAll(List<TransferItem> items) async {
+    final taskIds = items.map((item) => item.taskId).toList();
+    final result = await _fileDownloader.cancelTasksWithIds(taskIds);
+    if (result) {
+      for (final item in items) {
+        _activeTaskUrls.remove(item.url);
+      }
+    }
+    return result;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONFIGURATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Configures WiFi requirement.
   Future<bool> requireWiFi(
-    RequireWiFi requireWiFi, {
+    RequireWiFi requirement, {
     bool rescheduleRunningTasks = false,
   }) async {
-    return fileDownloader.requireWiFi(
-      requireWiFi,
+    return _fileDownloader.requireWiFi(
+      requirement,
       rescheduleRunningTasks: rescheduleRunningTasks,
     );
   }
 
+  /// Configures the downloader.
   Future<void> configure({
     List<(Config, Object)>? globalConfig,
     List<(Config, Object)>? androidConfig,
     List<(Config, Object)>? iOSConfig,
     List<(Config, Object)>? desktopConfig,
   }) async {
-    await fileDownloader.configure(
+    await _fileDownloader.configure(
       globalConfig: globalConfig,
       androidConfig: androidConfig,
       iOSConfig: iOSConfig,
@@ -197,7 +502,7 @@ class FileSystemController {
     );
   }
 
-  // Notification configuration
+  /// Configures notifications for a group.
   void configureNotificationForGroup(
     String group, {
     TaskNotification? running,
@@ -206,7 +511,7 @@ class FileSystemController {
     TaskNotification? paused,
     bool progressBar = false,
   }) {
-    fileDownloader.configureNotificationForGroup(
+    _fileDownloader.configureNotificationForGroup(
       group,
       running: running,
       complete: complete,
@@ -216,77 +521,162 @@ class FileSystemController {
     );
   }
 
-  // File picker operations
-  Future<Uri?> pickFile() async {
-    // return await fileDownloader.uri.pickFile();
-    return null;
-  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UTILITIES
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // Batch operations
-  Future<List<bool>> pauseAllTasks(List<TaskItem> tasks) async {
-    final results = <bool>[];
-    for (final task in tasks) {
-      try {
-        final success = await pause(task);
-        results.add(success);
-      } catch (e) {
-        results.add(false);
-      }
-    }
-    return results;
-  }
-
-  Future<List<bool>> resumeAllTasks(List<TaskItem> tasks) async {
-    final results = <bool>[];
-    for (final task in tasks) {
-      try {
-        final success = await resume(task);
-        results.add(success);
-      } catch (e) {
-        results.add(false);
-      }
-    }
-    return results;
-  }
-
-  Future<bool> cancelAllTasks(List<TaskItem> tasks) async {
-    final taskIds = tasks.map((task) => task.taskId).toList();
-    return await fileDownloader.cancelTasksWithIds(taskIds);
-  }
-
-  // Utility methods
+  /// Gets the default group name.
   String get defaultGroup => FileDownloader.defaultGroup;
 
-  // Dispose method
-  void dispose() {
-    _fileControllers.value.forEach((url, controller) => controller.close());
-    _fileControllers.value.clear();
-    fileUpdates.clear();
-    _filePaths.clear();
-    _fileControllers.dispose();
+  /// Clears all cached data.
+  void clearCache() {
+    _completedPaths.clear();
+    fileCacheManager.clear();
   }
 
-  void myNotificationTapCallback(Task task, NotificationType notificationType) {
-    debugPrint(
-      'Tapped notification $notificationType for taskId ${task.taskId}',
-    );
+  /// Gets transfer statistics.
+  Map<String, dynamic> getStats() {
+    int running = 0;
+    int paused = 0;
+    int completed = 0;
+    int failed = 0;
+
+    for (final item in _activeTransfers.values) {
+      switch (item.status) {
+        case TaskStatus.running:
+          running++;
+          break;
+        case TaskStatus.paused:
+          paused++;
+          break;
+        case TaskStatus.complete:
+          completed++;
+          break;
+        case TaskStatus.failed:
+          failed++;
+          break;
+        default:
+          break;
+      }
+    }
+
+    return {
+      'total': _activeTransfers.length,
+      'running': running,
+      'paused': paused,
+      'completed': completed,
+      'failed': failed,
+      'cached': _completedPaths.length,
+      'activeUrls': _activeTaskUrls.length,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CLEANUP
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Cleans up stale entries and resources.
+  Future<void> cleanup() async {
+    // Clean stale cache entries
+    await fileCacheManager.cleanStaleEntries();
+
+    // Clean up completed stream controllers (older than 5 minutes)
+    final now = DateTime.now();
+    final toCleanup = <String>[];
+
+    for (final entry in _activeTransfers.entries) {
+      final item = entry.value;
+      if (item.isComplete &&
+          item.completedAt != null &&
+          now.difference(item.completedAt!).inMinutes > 5) {
+        final controller = _streamControllers[entry.key];
+        if (controller != null && !controller.hasListener) {
+          toCleanup.add(entry.key);
+        }
+      }
+    }
+
+    for (final url in toCleanup) {
+      _cleanupController(url);
+    }
+
+    debugPrint('FileSystemController: Cleaned up ${toCleanup.length} entries');
+  }
+
+  /// Disposes the controller and all resources.
+  void dispose() {
+    // Cancel subscription
+    _updatesSubscription?.cancel();
+    _updatesSubscription = null;
+
+    // Close all controllers
+    for (final controller in _streamControllers.values) {
+      controller.close();
+    }
+    _streamControllers.clear();
+
+    // Clear all data
+    _activeTransfers.clear();
+    _completedPaths.clear();
+    _activeTaskUrls.clear();
+
+    // Clear mutex
+    _mutex.clear();
+
+    // Reset state
+    _isInitialized = false;
+
+    debugPrint('FileSystemController: Disposed');
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TASK FACTORY
+// ═══════════════════════════════════════════════════════════════════════════
 
 /// Creates a download task with standard configuration.
 DownloadTask createDownloadTask({
   required String url,
+  String? filename,
   String directory = "",
   BaseDirectory baseDirectory = BaseDirectory.temporary,
   bool allowPause = true,
   Updates updates = Updates.statusAndProgress,
+  String? group,
+  Map<String, String>? headers,
+  String? metaData,
 }) {
   return DownloadTask(
     url: url,
+    filename: filename ?? url.toHashName(),
     allowPause: allowPause,
     updates: updates,
     directory: directory,
     baseDirectory: baseDirectory,
-    filename: url.toHashName(),
+    group: group ?? FileDownloader.defaultGroup,
+    headers: headers ?? {},
+    metaData: metaData ?? '',
+  );
+}
+
+/// Creates an upload task with standard configuration.
+UploadTask createUploadTask({
+  required String url,
+  required String filePath,
+  String? filename,
+  Updates updates = Updates.statusAndProgress,
+  String? group,
+  Map<String, String>? headers,
+  String? metaData,
+  String httpRequestMethod = 'POST',
+}) {
+  return UploadTask(
+    url: url,
+    filename: filename ?? filePath.extractFileName(),
+    updates: updates,
+    group: group ?? FileDownloader.defaultGroup,
+    headers: headers ?? {},
+    metaData: metaData ?? '',
+    httpRequestMethod: httpRequestMethod,
   );
 }

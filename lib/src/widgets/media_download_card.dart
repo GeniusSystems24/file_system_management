@@ -5,14 +5,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dashed_circular_progress_bar/dashed_circular_progress_bar.dart';
 import 'package:flutter/material.dart';
 
-import '../models/task_item.dart';
+import '../models/transfer_item.dart';
 
 /// Widget to display a media download item in a message bubble.
 /// Media file types are image and video.
 ///
-/// display the download progress.
+/// Displays the download progress.
 ///
-/// [item] The task item to display.
+/// [item] The transfer item to display.
 /// [onStart] Callback to start the download.
 /// [onPause] Callback to pause the download.
 /// [onResume] Callback to resume the download.
@@ -24,16 +24,16 @@ import '../models/task_item.dart';
 /// [thumbnailUrl] The URL of the thumbnail.
 /// [thumbnailProvider] The provider of the thumbnail.
 class MediaDownloadCard extends StatelessWidget {
-  final TaskItem? item;
+  final TransferItem? item;
   final VoidCallback? onStart;
-  final void Function(TaskItem item)? onPause;
-  final void Function(TaskItem item)? onResume;
-  final void Function(TaskItem item)? onCancel;
-  final void Function(TaskItem item)? onRetry;
-  final Widget Function(BuildContext context, TaskItem item) completedBuilder;
+  final void Function(TransferItem item)? onPause;
+  final void Function(TransferItem item)? onResume;
+  final void Function(TransferItem item)? onCancel;
+  final void Function(TransferItem item)? onRetry;
+  final Widget Function(BuildContext context, TransferItem item) completedBuilder;
   final Widget Function(BuildContext context)? emptyBuilder;
-  final Widget Function(BuildContext context, TaskItem? item, Exception? error)?
-  errorBuilder;
+  final Widget Function(BuildContext context, TransferItem? item, Exception? error)?
+      errorBuilder;
 
   // Enhanced thumbnail support
   final String? thumbnailUrl;
@@ -121,15 +121,15 @@ class MediaDownloadCard extends StatelessWidget {
 
   Widget _playAndPauseButton(
     BuildContext context,
-    TaskItem? taskItem,
+    TransferItem? transferItem,
     Color foregroundColor,
     Color backgroundColor,
   ) {
     final theme = Theme.of(context);
 
-    final progressPercentage = (taskItem?.progress ?? 0) * 100;
+    final progressPercentage = (transferItem?.progress ?? 0) * 100;
 
-    if (taskItem?.status != TaskStatus.running) {
+    if (transferItem?.status != TaskStatus.running) {
       return SizedBox(
         width: 40,
         height: 40,
@@ -141,18 +141,17 @@ class MediaDownloadCard extends StatelessWidget {
           foregroundStrokeWidth: 3,
           foregroundColor: theme.colorScheme.secondary,
           backgroundColor: foregroundColor.withValues(
-            alpha: taskItem == null ? 0.0 : 0.3,
+            alpha: transferItem == null ? 0.0 : 0.3,
           ),
           animation: true,
-          child:
-              showActionButton
-                  ? Icon(Icons.cloud_download, color: foregroundColor, size: 20)
-                  : Container(),
+          child: showActionButton
+              ? Icon(Icons.cloud_download, color: foregroundColor, size: 20)
+              : Container(),
         ),
       );
     }
 
-    if (taskItem?.status == TaskStatus.running) {
+    if (transferItem?.status == TaskStatus.running) {
       return SizedBox(
         width: 40,
         height: 40,
@@ -165,10 +164,9 @@ class MediaDownloadCard extends StatelessWidget {
           foregroundColor: theme.colorScheme.primary,
           backgroundColor: foregroundColor.withValues(alpha: 0.4),
           animation: true,
-          child:
-              showActionButton
-                  ? Icon(Icons.close, color: foregroundColor, size: 20)
-                  : Container(),
+          child: showActionButton
+              ? Icon(Icons.close, color: foregroundColor, size: 20)
+              : Container(),
         ),
       );
     }
@@ -230,9 +228,8 @@ class MediaDownloadCard extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: thumbnailUrl!,
         fit: thumbnailFit,
-        progressIndicatorBuilder:
-            (context, child, loadingProgress) =>
-                _buildThumbnailLoading(context, loadingProgress),
+        progressIndicatorBuilder: (context, child, loadingProgress) =>
+            _buildThumbnailLoading(context, loadingProgress),
         errorWidget: (context, url, error) => _buildThumbnailError(context),
       );
     }
