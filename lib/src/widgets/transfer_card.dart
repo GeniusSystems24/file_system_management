@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../controllers/file_system_controller.dart';
-import '../models/transfer_item.dart';
+import '../domain/domain.dart';
+import '../presentation/controllers/transfer_controller.dart';
 import 'transfer_progress_indicator.dart';
 
 /// Callback type for transfer actions.
-typedef TransferCallback = void Function(TransferItem item);
+typedef TransferCallback = void Function(TransferEntity entity);
 
 /// A unified card widget for displaying file transfer (download/upload) progress.
 ///
@@ -23,21 +22,21 @@ class TransferCard extends StatefulWidget {
   /// The URL to download from or upload to.
   final String url;
 
-  /// Optional task to use instead of creating one from URL.
-  final Task? task;
-
   /// Whether to auto-start the transfer.
   final bool autoStart;
 
   /// Builder for completed state.
-  final Widget Function(BuildContext context, TransferItem item, String filePath)?
+  final Widget Function(
+          BuildContext context, TransferEntity entity, String filePath)?
       completedBuilder;
 
   /// Builder for loading/progress state.
-  final Widget Function(BuildContext context, TransferItem? item)? loadingBuilder;
+  final Widget Function(BuildContext context, TransferEntity? entity)?
+      loadingBuilder;
 
   /// Builder for error state.
-  final Widget Function(BuildContext context, TransferItem? item, String? error)?
+  final Widget Function(
+          BuildContext context, TransferEntity? entity, String? error)?
       errorBuilder;
 
   /// Builder for empty/initial state.
@@ -94,10 +93,12 @@ class TransferCard extends StatefulWidget {
   /// Whether this is a media card (shows thumbnail) or document card.
   final bool isMediaCard;
 
+  /// Transfer configuration.
+  final TransferConfigEntity? config;
+
   const TransferCard({
     super.key,
     required this.url,
-    this.task,
     this.autoStart = false,
     this.completedBuilder,
     this.loadingBuilder,
@@ -120,6 +121,7 @@ class TransferCard extends StatefulWidget {
     this.actionButtonSize = 40,
     this.progressColor,
     this.isMediaCard = true,
+    this.config,
   });
 
   @override
@@ -127,9 +129,9 @@ class TransferCard extends StatefulWidget {
 }
 
 class _TransferCardState extends State<TransferCard> {
-  final _controller = FileSystemController.instance;
-  StreamSubscription<TransferItem>? _subscription;
-  TransferItem? _item;
+  final _controller = TransferController.instance;
+  StreamSubscription<TransferEntity>? _subscription;
+  TransferEntity? _entity;
   String? _cachedPath;
   bool _isStarted = false;
 
@@ -161,46 +163,22 @@ class _TransferCardState extends State<TransferCard> {
 
   Future<void> _initialize() async {
     // Check if already cached
-    _cachedPath = _controller.getCachedPath(widget.url);
-    if (_cachedPath != null) {
-      _item = _controller.getTransfer(widget.url);
-      if (mounted) setState(() {});
-      return;
-    }
-
-    // Check if already in progress
-    _item = _controller.getTransfer(widget.url);
-    if (_item != null) {
-      _listenToStream();
-      if (mounted) setState(() {});
-      return;
-    }
-
-    // Auto-start if configured
-    if (widget.autoStart) {
-      await _startTransfer();
-    }
-  }
-
-  void _listenToStream() {
-    final stream = _controller.getStream(widget.url);
-    if (stream == null) return;
-
-    _subscription?.cancel();
-    _subscription = stream.listen(
-      (item) {
-        if (!mounted) return;
-        setState(() => _item = item);
-
-        if (item.isComplete) {
-          _cachedPath = item.filePath;
-          widget.onComplete?.call(item);
+    final cachedResult = await _controller.getCachedPath(widget.url);
+    cachedResult.fold(
+      onSuccess: (path) {
+        if (path != null) {
+          _cachedPath = path;
+          if (mounted) setState(() {});
+          return;
         }
       },
-      onError: (error) {
-        // Handle error
-      },
+      onFailure: (_) {},
     );
+
+    // Auto-start if configured
+    if (widget.autoStart && _cachedPath == null) {
+      await _startTransfer();
+    }
   }
 
   Future<void> _startTransfer() async {
@@ -209,45 +187,72 @@ class _TransferCardState extends State<TransferCard> {
 
     widget.onStart?.call();
 
-    final task = widget.task ?? createDownloadTask(url: widget.url);
-    final result = await _controller.enqueueDownload(task, autoStart: true);
+    final result = await _controller.download(
+      url: widget.url,
+      config: widget.config,
+    );
 
-    switch (result) {
-      case EnqueueCached(:final filePath):
-        _cachedPath = filePath;
-        if (mounted) setState(() {});
-        break;
-      case EnqueueStarted():
-      case EnqueueInProgress():
-      case EnqueuePending():
-        _listenToStream();
-        break;
-    }
+    result.fold(
+      onSuccess: (stream) {
+        _subscription?.cancel();
+        _subscription = stream.listen(
+          (entity) {
+            if (!mounted) return;
+            setState(() => _entity = entity);
+
+            if (entity.isComplete) {
+              _cachedPath = entity.filePath;
+              widget.onComplete?.call(entity);
+            }
+          },
+          onError: (error) {
+            // Handle error
+          },
+        );
+      },
+      onFailure: (failure) {
+        if (mounted) {
+          setState(() {
+            _entity = TransferEntity(
+              id: widget.url,
+              url: widget.url,
+              filePath: '',
+              fileName: '',
+              type: TransferTypeEntity.download,
+              status: TransferStatusEntity.failed,
+              errorMessage: failure.message,
+              createdAt: DateTime.now(),
+            );
+          });
+        }
+      },
+    );
   }
 
   Future<void> _handleAction() async {
-    if (_item == null) {
+    if (_entity == null) {
       await _startTransfer();
       return;
     }
 
-    switch (_item!.status) {
-      case TaskStatus.running:
-        if (_item!.canPause) {
-          await _controller.pause(_item!);
-          widget.onPause?.call(_item!);
+    switch (_entity!.status) {
+      case TransferStatusEntity.running:
+        if (_entity!.canPause) {
+          await _controller.pause(_entity!.id);
+          widget.onPause?.call(_entity!);
         } else {
-          await _controller.cancel(_item!);
-          widget.onCancel?.call(_item!);
+          await _controller.cancel(_entity!.id);
+          widget.onCancel?.call(_entity!);
         }
         break;
-      case TaskStatus.paused:
-        await _controller.resume(_item!);
-        widget.onResume?.call(_item!);
+      case TransferStatusEntity.paused:
+        await _controller.resume(_entity!.id);
+        widget.onResume?.call(_entity!);
         break;
-      case TaskStatus.failed:
-        await _controller.retry(_item!);
-        widget.onRetry?.call(_item!);
+      case TransferStatusEntity.failed:
+        _isStarted = false;
+        await _startTransfer();
+        widget.onRetry?.call(_entity!);
         break;
       default:
         await _startTransfer();
@@ -257,25 +262,25 @@ class _TransferCardState extends State<TransferCard> {
 
   bool get _isCompleted =>
       _cachedPath != null ||
-      _item?.isComplete == true ||
-      _item?.status == TaskStatus.complete;
+      _entity?.isComplete == true ||
+      _entity?.status == TransferStatusEntity.complete;
 
   @override
   Widget build(BuildContext context) {
     // Completed state
-    if (_isCompleted && _item != null && _cachedPath != null) {
+    if (_isCompleted && _entity != null && _cachedPath != null) {
       if (widget.completedBuilder != null) {
-        return widget.completedBuilder!(context, _item!, _cachedPath!);
+        return widget.completedBuilder!(context, _entity!, _cachedPath!);
       }
     }
 
     // Error state
-    if (_item?.isFailed == true) {
+    if (_entity?.isFailed == true) {
       if (widget.errorBuilder != null) {
         return widget.errorBuilder!(
           context,
-          _item,
-          _item?.exception?.description,
+          _entity,
+          _entity?.errorMessage,
         );
       }
     }
@@ -292,8 +297,11 @@ class _TransferCardState extends State<TransferCard> {
         ..._buildBackground(context),
 
         // Completed content
-        if (_isCompleted && widget.completedBuilder != null && _item != null)
-          widget.completedBuilder!(context, _item!, _cachedPath ?? _item!.filePath),
+        if (_isCompleted &&
+            widget.completedBuilder != null &&
+            _entity != null)
+          widget.completedBuilder!(
+              context, _entity!, _cachedPath ?? _entity!.filePath),
 
         // Center action button
         if (!_isCompleted) _buildCenterAction(context),
@@ -303,12 +311,13 @@ class _TransferCardState extends State<TransferCard> {
 
   Widget _buildDocumentCard(BuildContext context) {
     // Completed state
-    if (_isCompleted && widget.completedBuilder != null && _item != null) {
-      return widget.completedBuilder!(context, _item!, _cachedPath ?? _item!.filePath);
+    if (_isCompleted && widget.completedBuilder != null && _entity != null) {
+      return widget.completedBuilder!(
+          context, _entity!, _cachedPath ?? _entity!.filePath);
     }
 
     // Error state
-    if (_item?.isFailed == true) {
+    if (_entity?.isFailed == true) {
       return _buildErrorCard(context);
     }
 
@@ -324,7 +333,7 @@ class _TransferCardState extends State<TransferCard> {
                 borderRadius: BorderRadius.circular(1000),
                 onTap: _handleAction,
                 child: TransferProgressIndicator(
-                  item: _item,
+                  entity: _entity,
                   size: widget.actionButtonSize,
                   progressColor: widget.progressColor,
                 ),
@@ -335,7 +344,7 @@ class _TransferCardState extends State<TransferCard> {
 
           // Loading content
           Expanded(
-            child: widget.loadingBuilder?.call(context, _item) ??
+            child: widget.loadingBuilder?.call(context, _entity) ??
                 _buildDefaultLoadingContent(context),
           ),
         ],
@@ -359,7 +368,7 @@ class _TransferCardState extends State<TransferCard> {
                 borderRadius: BorderRadius.circular(1000),
                 onTap: _handleAction,
                 child: TransferProgressIndicator(
-                  item: _item,
+                  entity: _entity,
                   size: widget.actionButtonSize,
                   centerIcon: Icons.refresh,
                 ),
@@ -372,8 +381,8 @@ class _TransferCardState extends State<TransferCard> {
           Expanded(
             child: widget.errorBuilder?.call(
                   context,
-                  _item,
-                  _item?.exception?.description,
+                  _entity,
+                  _entity?.errorMessage,
                 ) ??
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -394,7 +403,7 @@ class _TransferCardState extends State<TransferCard> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _item?.exception?.description ?? 'فشل في التحميل',
+                          _entity?.errorMessage ?? 'فشل في التحميل',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.error,
                           ),
@@ -412,7 +421,7 @@ class _TransferCardState extends State<TransferCard> {
   Widget _buildDefaultLoadingContent(BuildContext context) {
     final theme = Theme.of(context);
 
-    if (_item == null) {
+    if (_entity == null) {
       return Text(
         'جاهز للتحميل',
         style: theme.textTheme.bodyMedium,
@@ -424,22 +433,22 @@ class _TransferCardState extends State<TransferCard> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          _item!.statusText,
+          _getStatusText(_entity!.status),
           style: theme.textTheme.bodyMedium,
         ),
-        if (_item!.isRunning) ...[
+        if (_entity!.isRunning) ...[
           const SizedBox(height: 4),
           Text(
-            '${_item!.progressText} • ${_item!.networkSpeedText}',
+            '${_entity!.progressPercent.toStringAsFixed(0)}% • ${_formatSpeed(_entity!.speed)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
-        if (_item!.isPaused) ...[
+        if (_entity!.isPaused) ...[
           const SizedBox(height: 4),
           Text(
-            _item!.pausedProgressText,
+            '${_entity!.progressPercent.toStringAsFixed(0)}% - متوقف',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -447,6 +456,28 @@ class _TransferCardState extends State<TransferCard> {
         ],
       ],
     );
+  }
+
+  String _getStatusText(TransferStatusEntity status) {
+    return switch (status) {
+      TransferStatusEntity.pending => 'في الانتظار',
+      TransferStatusEntity.running => 'جاري التحميل',
+      TransferStatusEntity.paused => 'متوقف مؤقتاً',
+      TransferStatusEntity.complete => 'مكتمل',
+      TransferStatusEntity.failed => 'فشل',
+      TransferStatusEntity.canceled => 'ملغى',
+      _ => 'غير معروف',
+    };
+  }
+
+  String _formatSpeed(double bytesPerSecond) {
+    if (bytesPerSecond < 1024) {
+      return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+    } else if (bytesPerSecond < 1024 * 1024) {
+      return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    } else {
+      return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+    }
   }
 
   List<Widget> _buildBackground(BuildContext context) {
@@ -467,7 +498,7 @@ class _TransferCardState extends State<TransferCard> {
           borderRadius: BorderRadius.circular(1000),
           onTap: widget.showActionButton ? _handleAction : null,
           child: TransferProgressIndicator(
-            item: _item,
+            entity: _entity,
             size: widget.actionButtonSize,
             progressColor: widget.progressColor,
           ),
@@ -498,7 +529,8 @@ class _TransferCardState extends State<TransferCard> {
         Positioned.fill(
           child: Container(
             clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(borderRadius: widget.thumbnailBorderRadius),
+            decoration:
+                BoxDecoration(borderRadius: widget.thumbnailBorderRadius),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: Container(

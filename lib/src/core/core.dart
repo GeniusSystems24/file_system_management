@@ -4,13 +4,9 @@
 ///
 /// Structure:
 /// - extensions/: Dart extensions
-/// - utils/: Utility functions
-/// - errors/: Error handling
-/// - constants/: Constants
+/// - task_mutex: Mutex for preventing duplicate operations
 library;
 
 export 'extensions/file_path_extension.dart';
 export 'extensions/string_extension.dart';
 export 'task_mutex.dart';
-export 'transfer_queue_manager.dart';
-export 'download_queue_manager.dart';

@@ -1,15 +1,14 @@
-import 'package:background_downloader/background_downloader.dart';
 import 'package:dashed_circular_progress_bar/dashed_circular_progress_bar.dart';
 import 'package:flutter/material.dart';
 
-import '../models/transfer_item.dart';
+import '../domain/domain.dart';
 
 /// A circular progress indicator for file transfers.
 ///
 /// Shows download/upload progress with customizable appearance.
 class TransferProgressIndicator extends StatelessWidget {
-  /// The transfer item to display progress for.
-  final TransferItem? item;
+  /// The transfer entity to display progress for.
+  final TransferEntity? entity;
 
   /// Size of the indicator.
   final double size;
@@ -37,7 +36,7 @@ class TransferProgressIndicator extends StatelessWidget {
 
   const TransferProgressIndicator({
     super.key,
-    this.item,
+    this.entity,
     this.size = 40,
     this.strokeWidth = 3,
     this.progressColor,
@@ -51,12 +50,14 @@ class TransferProgressIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = (item?.progress ?? 0) * 100;
-    final status = item?.status ?? TaskStatus.enqueued;
+    final progress = (entity?.progress ?? 0) * 100;
+    final status = entity?.status ?? TransferStatusEntity.pending;
 
-    final effectiveProgressColor = progressColor ?? _getProgressColor(theme, status);
+    final effectiveProgressColor =
+        progressColor ?? _getProgressColor(theme, status);
     final effectiveBackgroundColor = backgroundColor ??
-        theme.colorScheme.onSurface.withValues(alpha: item == null ? 0.0 : 0.3);
+        theme.colorScheme.onSurface
+            .withValues(alpha: entity == null ? 0.0 : 0.3);
 
     return SizedBox(
       width: size,
@@ -75,14 +76,14 @@ class TransferProgressIndicator extends StatelessWidget {
     );
   }
 
-  Widget _buildCenter(BuildContext context, TaskStatus status) {
+  Widget _buildCenter(BuildContext context, TransferStatusEntity status) {
     final theme = Theme.of(context);
     final iconColor = theme.colorScheme.onSurface;
     final effectiveIconSize = iconSize ?? size * 0.5;
 
-    if (showPercentage && item != null && status == TaskStatus.running) {
+    if (showPercentage && entity != null && status == TransferStatusEntity.running) {
       return Text(
-        item!.progressText,
+        '${entity!.progressPercent.toStringAsFixed(0)}%',
         style: theme.textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.bold,
         ),
@@ -93,22 +94,22 @@ class TransferProgressIndicator extends StatelessWidget {
     return Icon(icon, color: iconColor, size: effectiveIconSize);
   }
 
-  IconData _getDefaultIcon(TaskStatus status) {
+  IconData _getDefaultIcon(TransferStatusEntity status) {
     return switch (status) {
-      TaskStatus.running => Icons.close,
-      TaskStatus.paused => Icons.play_arrow,
-      TaskStatus.failed => Icons.refresh,
-      TaskStatus.complete => Icons.check,
+      TransferStatusEntity.running => Icons.close,
+      TransferStatusEntity.paused => Icons.play_arrow,
+      TransferStatusEntity.failed => Icons.refresh,
+      TransferStatusEntity.complete => Icons.check,
       _ => Icons.cloud_download,
     };
   }
 
-  Color _getProgressColor(ThemeData theme, TaskStatus status) {
+  Color _getProgressColor(ThemeData theme, TransferStatusEntity status) {
     return switch (status) {
-      TaskStatus.running => theme.colorScheme.primary,
-      TaskStatus.paused => theme.colorScheme.secondary,
-      TaskStatus.failed => theme.colorScheme.error,
-      TaskStatus.complete => Colors.green,
+      TransferStatusEntity.running => theme.colorScheme.primary,
+      TransferStatusEntity.paused => theme.colorScheme.secondary,
+      TransferStatusEntity.failed => theme.colorScheme.error,
+      TransferStatusEntity.complete => Colors.green,
       _ => theme.colorScheme.secondary,
     };
   }

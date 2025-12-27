@@ -1,14 +1,13 @@
-import 'package:background_downloader/background_downloader.dart';
 import 'package:dashed_circular_progress_bar/dashed_circular_progress_bar.dart';
 import 'package:flutter/material.dart';
 
-import '../models/transfer_item.dart';
+import '../domain/domain.dart';
 
 /// Widget to display a document download item in a WhatsApp-style message bubble.
 /// Document file types are pdf, doc, docx, xls, xlsx, ppt, pptx, txt, csv, etc.
 /// Displays the file name, size, progress with modern WhatsApp-inspired design.
 ///
-/// [item] The transfer item to display.
+/// [entity] The transfer entity to display.
 /// [onPause] Callback to pause the download.
 /// [onResume] Callback to resume the download.
 /// [onCancel] Callback to cancel the download.
@@ -16,19 +15,22 @@ import '../models/transfer_item.dart';
 /// [onOpen] Callback to open the completed file.
 /// [onRemove] Callback to remove the task from list.
 class DocumentDownloadCard extends StatelessWidget {
-  final TransferItem? item;
+  final TransferEntity? entity;
   final String? fileName;
   final int? fileSize;
   final VoidCallback? onStart;
-  final void Function(TransferItem item)? onPause;
-  final void Function(TransferItem item)? onResume;
-  final void Function(TransferItem item)? onCancel;
-  final void Function(TransferItem item)? onRetry;
-  final void Function(TransferItem item)? onOpen;
-  final void Function(TransferItem item)? onRemove;
-  final Widget Function(BuildContext context, TransferItem item) completedBuilder;
-  final Widget Function(BuildContext context, TransferItem? item) loadingBuilder;
-  final Widget Function(BuildContext context, TransferItem? item, Exception? error)?
+  final void Function(TransferEntity entity)? onPause;
+  final void Function(TransferEntity entity)? onResume;
+  final void Function(TransferEntity entity)? onCancel;
+  final void Function(TransferEntity entity)? onRetry;
+  final void Function(TransferEntity entity)? onOpen;
+  final void Function(TransferEntity entity)? onRemove;
+  final Widget Function(BuildContext context, TransferEntity entity)
+      completedBuilder;
+  final Widget Function(BuildContext context, TransferEntity? entity)
+      loadingBuilder;
+  final Widget Function(
+          BuildContext context, TransferEntity? entity, String? error)?
       errorBuilder;
 
   /// Icon color for the download button
@@ -38,7 +40,7 @@ class DocumentDownloadCard extends StatelessWidget {
     super.key,
     required this.completedBuilder,
     required this.loadingBuilder,
-    this.item,
+    this.entity,
     this.fileName,
     this.fileSize,
     this.onStart,
@@ -53,19 +55,19 @@ class DocumentDownloadCard extends StatelessWidget {
   });
 
   VoidCallback? _getMainAction() {
-    switch (item?.status) {
-      case TaskStatus.running:
-        return (item?.allowPause ?? false)
+    switch (entity?.status) {
+      case TransferStatusEntity.running:
+        return (entity?.allowPause ?? false)
             ? onPause == null
                 ? null
-                : () => onPause?.call(item!)
+                : () => onPause?.call(entity!)
             : null;
-      case TaskStatus.paused:
-        return onResume == null ? null : () => onResume?.call(item!);
-      case TaskStatus.failed:
-        return onRetry == null ? null : () => onRetry?.call(item!);
-      case TaskStatus.complete:
-        return onOpen == null ? null : () => onOpen?.call(item!);
+      case TransferStatusEntity.paused:
+        return onResume == null ? null : () => onResume?.call(entity!);
+      case TransferStatusEntity.failed:
+        return onRetry == null ? null : () => onRetry?.call(entity!);
+      case TransferStatusEntity.complete:
+        return onOpen == null ? null : () => onOpen?.call(entity!);
       default:
         return onStart;
     }
@@ -73,15 +75,15 @@ class DocumentDownloadCard extends StatelessWidget {
 
   Widget _playAndPauseButton(
     BuildContext context,
-    TransferItem? transferItem,
+    TransferEntity? transferEntity,
     Color foregroundColor,
     Color backgroundColor,
   ) {
     final theme = Theme.of(context);
 
-    final progressPercentage = (transferItem?.progress ?? 0) * 100;
+    final progressPercentage = (transferEntity?.progress ?? 0) * 100;
 
-    if (transferItem?.status != TaskStatus.running) {
+    if (transferEntity?.status != TransferStatusEntity.running) {
       return DashedCircularProgressBar.square(
         dimensions: 40,
         progress: progressPercentage,
@@ -90,7 +92,7 @@ class DocumentDownloadCard extends StatelessWidget {
         foregroundStrokeWidth: 3,
         foregroundColor: theme.colorScheme.secondary,
         backgroundColor: foregroundColor.withValues(
-          alpha: transferItem == null ? 0.0 : 0.3,
+          alpha: transferEntity == null ? 0.0 : 0.3,
         ),
         child: Icon(Icons.cloud_download, color: foregroundColor, size: 25),
       );
@@ -110,8 +112,8 @@ class DocumentDownloadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (item?.status == TaskStatus.complete) {
-      return completedBuilder(context, item!);
+    if (entity?.status == TransferStatusEntity.complete) {
+      return completedBuilder(context, entity!);
     }
 
     final effectiveIconColor = iconColor ?? Colors.white;
@@ -121,7 +123,7 @@ class DocumentDownloadCard extends StatelessWidget {
       child: Row(
         children: [
           // Action button
-          if (item?.status != TaskStatus.complete)
+          if (entity?.status != TransferStatusEntity.complete)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: InkWell(
@@ -129,7 +131,7 @@ class DocumentDownloadCard extends StatelessWidget {
                 onTap: _getMainAction(),
                 child: _playAndPauseButton(
                   context,
-                  item,
+                  entity,
                   effectiveIconColor,
                   Colors.white,
                 ),
@@ -139,7 +141,8 @@ class DocumentDownloadCard extends StatelessWidget {
           const SizedBox(width: 12),
 
           // Error message
-          if (item?.status == TaskStatus.failed || item?.exception != null)
+          if (entity?.status == TransferStatusEntity.failed ||
+              entity?.errorMessage != null)
             Expanded(
               child: Container(
                 margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -151,8 +154,10 @@ class DocumentDownloadCard extends StatelessWidget {
                       .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color:
-                        Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .error
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -165,7 +170,7 @@ class DocumentDownloadCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        item?.exception?.description ?? 'فشل في التحميل',
+                        entity?.errorMessage ?? 'فشل في التحميل',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.error,
                             ),
@@ -176,7 +181,7 @@ class DocumentDownloadCard extends StatelessWidget {
               ),
             )
           else
-            Expanded(child: loadingBuilder(context, item)),
+            Expanded(child: loadingBuilder(context, entity)),
         ],
       ),
     );

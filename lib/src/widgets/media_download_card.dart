@@ -1,18 +1,17 @@
 import 'dart:ui';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dashed_circular_progress_bar/dashed_circular_progress_bar.dart';
 import 'package:flutter/material.dart';
 
-import '../models/transfer_item.dart';
+import '../domain/domain.dart';
 
 /// Widget to display a media download item in a message bubble.
 /// Media file types are image and video.
 ///
 /// Displays the download progress.
 ///
-/// [item] The transfer item to display.
+/// [entity] The transfer entity to display.
 /// [onStart] Callback to start the download.
 /// [onPause] Callback to pause the download.
 /// [onResume] Callback to resume the download.
@@ -24,15 +23,17 @@ import '../models/transfer_item.dart';
 /// [thumbnailUrl] The URL of the thumbnail.
 /// [thumbnailProvider] The provider of the thumbnail.
 class MediaDownloadCard extends StatelessWidget {
-  final TransferItem? item;
+  final TransferEntity? entity;
   final VoidCallback? onStart;
-  final void Function(TransferItem item)? onPause;
-  final void Function(TransferItem item)? onResume;
-  final void Function(TransferItem item)? onCancel;
-  final void Function(TransferItem item)? onRetry;
-  final Widget Function(BuildContext context, TransferItem item) completedBuilder;
+  final void Function(TransferEntity entity)? onPause;
+  final void Function(TransferEntity entity)? onResume;
+  final void Function(TransferEntity entity)? onCancel;
+  final void Function(TransferEntity entity)? onRetry;
+  final Widget Function(BuildContext context, TransferEntity entity)
+      completedBuilder;
   final Widget Function(BuildContext context)? emptyBuilder;
-  final Widget Function(BuildContext context, TransferItem? item, Exception? error)?
+  final Widget Function(
+          BuildContext context, TransferEntity? entity, String? error)?
       errorBuilder;
 
   // Enhanced thumbnail support
@@ -49,7 +50,7 @@ class MediaDownloadCard extends StatelessWidget {
   const MediaDownloadCard({
     super.key,
     required this.completedBuilder,
-    this.item,
+    this.entity,
     this.onStart,
     this.onPause,
     this.onResume,
@@ -70,7 +71,8 @@ class MediaDownloadCard extends StatelessWidget {
   });
 
   bool get isCompleted =>
-      item?.progress == 1 || item?.status == TaskStatus.complete;
+      entity?.progress == 1 ||
+      entity?.status == TransferStatusEntity.complete;
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +81,7 @@ class MediaDownloadCard extends StatelessWidget {
         // Background
         ..._buildBackground(context),
 
-        if (isCompleted) completedBuilder(context, item!),
+        if (isCompleted) completedBuilder(context, entity!),
 
         // Center action button
         if (!isCompleted) _buildCenterAction(context),
@@ -110,7 +112,7 @@ class MediaDownloadCard extends StatelessWidget {
           onTap: showActionButton ? _getMainAction() : null,
           child: _playAndPauseButton(
             context,
-            item,
+            entity,
             foregroundColor,
             backgroundColor,
           ),
@@ -121,15 +123,15 @@ class MediaDownloadCard extends StatelessWidget {
 
   Widget _playAndPauseButton(
     BuildContext context,
-    TransferItem? transferItem,
+    TransferEntity? transferEntity,
     Color foregroundColor,
     Color backgroundColor,
   ) {
     final theme = Theme.of(context);
 
-    final progressPercentage = (transferItem?.progress ?? 0) * 100;
+    final progressPercentage = (transferEntity?.progress ?? 0) * 100;
 
-    if (transferItem?.status != TaskStatus.running) {
+    if (transferEntity?.status != TransferStatusEntity.running) {
       return SizedBox(
         width: 40,
         height: 40,
@@ -141,7 +143,7 @@ class MediaDownloadCard extends StatelessWidget {
           foregroundStrokeWidth: 3,
           foregroundColor: theme.colorScheme.secondary,
           backgroundColor: foregroundColor.withValues(
-            alpha: transferItem == null ? 0.0 : 0.3,
+            alpha: transferEntity == null ? 0.0 : 0.3,
           ),
           animation: true,
           child: showActionButton
@@ -151,7 +153,7 @@ class MediaDownloadCard extends StatelessWidget {
       );
     }
 
-    if (transferItem?.status == TaskStatus.running) {
+    if (transferEntity?.status == TransferStatusEntity.running) {
       return SizedBox(
         width: 40,
         height: 40,
@@ -292,17 +294,17 @@ class MediaDownloadCard extends StatelessWidget {
   }
 
   VoidCallback? _getMainAction() {
-    switch (item?.status) {
-      case TaskStatus.running:
-        return (item?.allowPause ?? false)
+    switch (entity?.status) {
+      case TransferStatusEntity.running:
+        return (entity?.allowPause ?? false)
             ? onPause == null
                 ? null
-                : () => onPause?.call(item!)
+                : () => onPause?.call(entity!)
             : null;
-      case TaskStatus.paused:
-        return onResume == null ? null : () => onResume?.call(item!);
-      case TaskStatus.failed:
-        return onRetry == null ? null : () => onRetry?.call(item!);
+      case TransferStatusEntity.paused:
+        return onResume == null ? null : () => onResume?.call(entity!);
+      case TransferStatusEntity.failed:
+        return onRetry == null ? null : () => onRetry?.call(entity!);
       default:
         return onStart;
     }

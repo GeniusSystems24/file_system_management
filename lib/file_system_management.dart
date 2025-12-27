@@ -10,8 +10,8 @@
 /// - **Presentation Layer**: Controllers, widgets, and themes
 ///
 /// ## Features:
-/// - Download and upload file management with injectable handlers
-/// - Custom upload/download callbacks for any backend provider
+/// - Download and upload file management
+/// - Clean Architecture with Result pattern for error handling
 /// - Social media-inspired skins (WhatsApp, Telegram, Instagram)
 /// - Mutex-based locking to prevent duplicate operations
 /// - Automatic file caching with URL recognition
@@ -22,33 +22,14 @@
 /// - Parallel downloads for faster speeds
 /// - Batch operations
 /// - Shared storage support
+/// - Injectable handlers for custom upload/download logic
 ///
-/// ## Basic Usage:
+/// ## Usage:
 /// ```dart
 /// // Initialize the controller
-/// await FileSystemController.instance.initialize();
-///
-/// // Download a file
-/// final task = createDownloadTask(url: 'https://example.com/file.pdf');
-/// final result = await FileSystemController.instance.enqueueDownload(task);
-///
-/// switch (result) {
-///   case EnqueueCached(:final filePath):
-///     print('File already cached at: $filePath');
-///   case EnqueueStarted(:final controller):
-///     controller.stream.listen((item) {
-///       print('Progress: ${item.progressText}');
-///     });
-///   // ...
-/// }
-/// ```
-///
-/// ## Clean Architecture Usage:
-/// ```dart
-/// // Initialize the new controller
 /// await TransferController.instance.initialize();
 ///
-/// // Download using use cases
+/// // Download a file
 /// final result = await TransferController.instance.download(
 ///   url: 'https://example.com/file.pdf',
 /// );
@@ -105,44 +86,31 @@ export 'src/presentation/presentation.dart';
 export 'src/core/core.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// LEGACY EXPORTS - For backwards compatibility
+// HANDLERS - Injectable upload/download abstractions
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Core exports (legacy paths)
-export 'src/core/app_directory.dart';
-export 'src/core/extensions/file_path_extension.dart';
-export 'src/core/extensions/string_extension.dart';
-export 'src/core/file_cache_manager.dart';
-export 'src/core/task_mutex.dart';
-export 'src/core/transfer_queue_manager.dart';
-export 'src/core/download_queue_manager.dart';
-
-// Controllers (legacy)
-export 'src/controllers/file_system_controller.dart';
-
-// Models
-export 'src/models/transfer_item.dart';
-export 'src/models/file_model.dart';
-export 'src/models/file_type_enum.dart';
-export 'src/models/notifier.dart';
-
-// Legacy compatibility - TaskItem is now TransferItem
-export 'src/models/task_item.dart';
-
-// Handlers - Injectable upload/download abstractions
 export 'src/handlers/cancellation_token.dart';
 export 'src/handlers/transfer_handler.dart';
 export 'src/handlers/transfer_progress.dart';
 export 'src/handlers/transfer_result.dart';
 
-// Theme - Social media skins and customization
+// ═══════════════════════════════════════════════════════════════════════════
+// THEME - Social media skins and customization
+// ═══════════════════════════════════════════════════════════════════════════
+
 export 'src/theme/social_transfer_theme.dart';
 
-// Widgets - Core transfer widgets
+// ═══════════════════════════════════════════════════════════════════════════
+// WIDGETS - Core transfer widgets
+// ═══════════════════════════════════════════════════════════════════════════
+
 export 'src/widgets/transfer_card.dart';
 export 'src/widgets/transfer_progress_indicator.dart';
 export 'src/widgets/media_download_card.dart';
 export 'src/widgets/document_download_card.dart';
 
-// Widgets - Message transfer widgets
+// ═══════════════════════════════════════════════════════════════════════════
+// WIDGETS - Message transfer widgets
+// ═══════════════════════════════════════════════════════════════════════════
+
 export 'src/widgets/messages/messages.dart';
