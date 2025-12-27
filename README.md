@@ -374,6 +374,74 @@ for (final transfer in state.pendingTransfers) {
 }
 ```
 
+### Using Queue with Message Widgets
+
+Integrate the queue manager with message widgets to control concurrent downloads:
+
+```dart
+// Create a queued download provider
+class QueuedDownloadProvider {
+  late final TransferQueueManager<DownloadTask> _queue;
+
+  QueuedDownloadProvider({int maxConcurrent = 3}) {
+    _queue = TransferQueueManager<DownloadTask>(
+      maxConcurrent: maxConcurrent,
+      executor: _executeDownload,
+    );
+  }
+
+  /// Use this in widget's onDownload callback
+  Stream<TransferProgress> enqueueDownload(DownloadPayload payload) {
+    final task = DownloadTask(url: payload.url, size: payload.expectedSize);
+    final queued = _queue.add(task, id: payload.url);
+    return queued.progressStream;
+  }
+
+  Stream<TransferProgress> _executeDownload(QueuedTransfer<DownloadTask> transfer) async* {
+    // Your download logic here
+    yield* yourDownloadStream(transfer.task.url);
+  }
+}
+
+// Use with widgets
+final provider = QueuedDownloadProvider(maxConcurrent: 3);
+
+ImageMessageTransferWidget(
+  url: 'https://example.com/image1.jpg',
+  onDownload: (payload) => provider.enqueueDownload(payload),
+)
+
+ImageMessageTransferWidget(
+  url: 'https://example.com/image2.jpg',
+  onDownload: (payload) => provider.enqueueDownload(payload),
+)
+
+// Only 3 downloads will run concurrently
+// Rest will queue automatically
+```
+
+### Queue Status Display
+
+Show queue status in your UI:
+
+```dart
+StreamBuilder<TransferQueueState>(
+  stream: provider.stateStream,
+  builder: (context, snapshot) {
+    final state = snapshot.data;
+    if (state == null) return SizedBox.shrink();
+
+    return Row(
+      children: [
+        Text('Running: ${state.runningCount}/${state.maxConcurrent}'),
+        Text('Queued: ${state.pendingCount}'),
+        LinearProgressIndicator(value: state.overallProgress),
+      ],
+    );
+  },
+)
+```
+
 ## Theming & Skins
 
 The `SocialTransferThemeData` class extends `ThemeExtension`, integrating seamlessly with Flutter's theme system.

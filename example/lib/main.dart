@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/chat_demo_screen.dart';
 import 'screens/queue_demo_screen.dart';
+import 'screens/queued_chat_demo_screen.dart';
 import 'screens/settings_screen.dart';
 
 void main() async {
@@ -128,6 +129,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final screens = [
       ChatDemoScreen(currentSkin: widget.currentSkin),
+      const QueuedChatDemoScreen(),
       const QueueDemoScreen(),
       SettingsScreen(
         currentSkin: widget.currentSkin,
@@ -151,6 +153,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat),
             label: 'المحادثات',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.download_outlined),
+            selectedIcon: Icon(Icons.download),
+            label: 'الطابور+ويدجت',
           ),
           NavigationDestination(
             icon: Icon(Icons.queue_outlined),
