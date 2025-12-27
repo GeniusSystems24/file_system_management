@@ -22,6 +22,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Full queue management with pause/resume/cancel/retry
   - Integration with `background_downloader` package
 
+#### WhatsApp-like Example App
+- Redesigned `QueuedChatDemoScreen` with WhatsApp-inspired UI
+  - Chat bubble styling with incoming/outgoing message differentiation
+  - Green color scheme matching WhatsApp theme
+  - Timestamps and read receipts (blue ticks)
+  - Arabic RTL support
+- Video playback integration using `video_player` and `chewie`
+  - Full video controls after download
+  - Aspect ratio preservation
+  - WhatsApp-style progress colors
+- Audio playback integration using `just_audio`
+  - Waveform visualization with progress indicator
+  - Play/pause controls
+  - Duration and position display
+- Full-screen image viewer with zoom support
+- Document/file opening with `open_filex`
+- Download progress shown inside circular buttons
+
 #### Queue Management System
 - `TransferQueueManager<T>` - Generic queue manager with configurable concurrency
   - Priority-based queue (urgent, high, normal, low)
