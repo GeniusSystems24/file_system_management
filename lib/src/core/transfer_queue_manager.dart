@@ -248,7 +248,7 @@ class TransferQueueManager<T> {
   final Map<String, QueuedTransfer<T>> _allTransfers = {};
 
   /// Stream controller for queue state changes.
-  final _stateController = StreamController<TransferQueueState>.broadcast();
+  final _stateController = StreamController<TransferQueueState<T>>.broadcast();
 
   /// Whether the queue is paused.
   bool _isPaused = false;
@@ -309,10 +309,10 @@ class TransferQueueManager<T> {
   bool get hasAvailableSlots => runningCount < _maxConcurrent;
 
   /// Stream of queue state changes.
-  Stream<TransferQueueState> get stateStream => _stateController.stream;
+  Stream<TransferQueueState<T>> get stateStream => _stateController.stream;
 
   /// Current queue state.
-  TransferQueueState get state => TransferQueueState(
+  TransferQueueState<T> get state => TransferQueueState<T>(
         runningCount: runningCount,
         pendingCount: pendingCount,
         maxConcurrent: _maxConcurrent,
@@ -331,6 +331,9 @@ class TransferQueueManager<T> {
   /// Gets all pending transfers.
   List<QueuedTransfer<T>> get pendingTransfers =>
       List.unmodifiable(_pendingQueue.toList());
+
+  /// Gets all transfers (for iteration).
+  Iterable<QueuedTransfer<T>> get allTransfers => _allTransfers.values;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ADD OPERATIONS

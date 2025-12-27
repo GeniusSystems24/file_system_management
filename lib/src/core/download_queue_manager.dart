@@ -256,7 +256,7 @@ class DownloadQueueManager {
 
   /// Waits for all downloads to complete.
   Future<List<TransferQueueResult<DownloadTask>>> waitForAll() async {
-    final futures = _queue._allTransfers.values
+    final futures = _queue.allTransfers
         .where((t) => !t.isFinished)
         .map((t) => t.future)
         .toList();

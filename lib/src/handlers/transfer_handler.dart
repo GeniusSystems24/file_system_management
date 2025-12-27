@@ -148,6 +148,9 @@ class DownloadPayload {
   /// Expected file size (for progress calculation).
   final int? expectedSize;
 
+  /// Request headers.
+  final Map<String, String>? headers;
+
   /// Custom metadata.
   final Map<String, dynamic>? metadata;
 
@@ -156,6 +159,7 @@ class DownloadPayload {
     this.destinationPath,
     this.fileName,
     this.expectedSize,
+    this.headers,
     this.metadata,
   });
 }
