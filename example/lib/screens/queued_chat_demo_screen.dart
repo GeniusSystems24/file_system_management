@@ -459,6 +459,7 @@ class _ChatBubble extends StatefulWidget {
 class _ChatBubbleState extends State<_ChatBubble> {
   String? _cachedPath;
   bool _isDownloading = false;
+  bool _isPaused = false;
   double _progress = 0;
   String? _error;
 
@@ -540,6 +541,7 @@ class _ChatBubbleState extends State<_ChatBubble> {
   void _startDownload() {
     setState(() {
       _isDownloading = true;
+      _isPaused = false;
       _error = null;
     });
 
@@ -552,7 +554,10 @@ class _ChatBubbleState extends State<_ChatBubble> {
         .listen(
           (progress) {
             if (mounted) {
-              setState(() => _progress = progress.progress);
+              setState(() {
+                _progress = progress.progress;
+                _isPaused = progress.status == TransferStatus.paused;
+              });
             }
           },
           onDone: () {
@@ -561,6 +566,7 @@ class _ChatBubbleState extends State<_ChatBubble> {
                   widget.provider.getCompletedPath(widget.message.url);
               setState(() {
                 _isDownloading = false;
+                _isPaused = false;
                 _cachedPath = path;
               });
               if (path != null) {
@@ -572,11 +578,37 @@ class _ChatBubbleState extends State<_ChatBubble> {
             if (mounted) {
               setState(() {
                 _isDownloading = false;
+                _isPaused = false;
                 _error = e.toString();
               });
             }
           },
         );
+  }
+
+  Future<void> _pauseDownload() async {
+    final result = await widget.provider.pauseDownload(widget.message.url);
+    if (result && mounted) {
+      setState(() => _isPaused = true);
+    }
+  }
+
+  Future<void> _resumeDownload() async {
+    final result = await widget.provider.resumeDownload(widget.message.url);
+    if (result && mounted) {
+      setState(() => _isPaused = false);
+    }
+  }
+
+  void _cancelDownload() {
+    widget.provider.cancel(widget.message.url);
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+        _isPaused = false;
+        _progress = 0;
+      });
+    }
   }
 
   void _toggleAudioPlayback() async {
@@ -761,15 +793,17 @@ class _ChatBubbleState extends State<_ChatBubble> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          // Download button
+          // Download/Pause/Resume button
           GestureDetector(
-            onTap: _isDownloading ? null : _startDownload,
+            onTap: _isDownloading
+                ? (_isPaused ? _resumeDownload : _pauseDownload)
+                : _startDownload,
             child: Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
                 color: _isDownloading
-                    ? Colors.grey[300]
+                    ? (_isPaused ? Colors.orange : Colors.grey[300])
                     : const Color(0xFF25D366),
                 shape: BoxShape.circle,
               ),
@@ -780,16 +814,14 @@ class _ChatBubbleState extends State<_ChatBubble> {
                         CircularProgressIndicator(
                           value: _progress > 0 ? _progress : null,
                           strokeWidth: 2,
-                          valueColor: const AlwaysStoppedAnimation(
-                            Color(0xFF075E54),
+                          valueColor: AlwaysStoppedAnimation(
+                            _isPaused ? Colors.orange : const Color(0xFF075E54),
                           ),
                         ),
-                        Text(
-                          '${(_progress * 100).toInt()}%',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Icon(
+                          _isPaused ? Icons.play_arrow : Icons.pause,
+                          size: 20,
+                          color: _isPaused ? Colors.white : const Color(0xFF075E54),
                         ),
                       ],
                     )
@@ -806,19 +838,36 @@ class _ChatBubbleState extends State<_ChatBubble> {
                 SizedBox(
                   height: 32,
                   child: CustomPaint(
-                    painter: _WaveformPainter(progress: 0, isPlaying: false),
+                    painter: _WaveformPainter(progress: _isDownloading ? _progress : 0, isPlaying: false),
                     size: const Size(double.infinity, 32),
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  widget.message.duration != null
-                      ? _formatDuration(widget.message.duration!)
-                      : _formatBytes(widget.message.fileSize ?? 0),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      _isDownloading
+                          ? (_isPaused ? 'متوقف' : '${(_progress * 100).toInt()}%')
+                          : (widget.message.duration != null
+                              ? _formatDuration(widget.message.duration!)
+                              : _formatBytes(widget.message.fileSize ?? 0)),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _isPaused ? Colors.orange : Colors.grey[600],
+                      ),
+                    ),
+                    if (_isDownloading) ...[
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: _cancelDownload,
+                        child: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -838,28 +887,43 @@ class _ChatBubbleState extends State<_ChatBubble> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          // File icon
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(iconData, color: color, size: 28),
-                if (_isDownloading)
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      value: _progress > 0 ? _progress : null,
-                      strokeWidth: 2,
+          // File icon with progress
+          GestureDetector(
+            onTap: _isDownloading
+                ? (_isPaused ? _resumeDownload : _pauseDownload)
+                : null,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (_isDownloading)
+                    Icon(
+                      _isPaused ? Icons.play_arrow : Icons.pause,
+                      color: color,
+                      size: 24,
+                    )
+                  else
+                    Icon(iconData, color: color, size: 28),
+                  if (_isDownloading)
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(
+                        value: _progress > 0 ? _progress : null,
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(
+                          _isPaused ? Colors.orange : color,
+                        ),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -898,10 +962,14 @@ class _ChatBubbleState extends State<_ChatBubble> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _formatBytes(widget.message.fileSize ?? 0),
+                      _isDownloading
+                          ? (_isPaused
+                              ? 'متوقف'
+                              : '${(_progress * 100).toInt()}%')
+                          : _formatBytes(widget.message.fileSize ?? 0),
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: _isPaused ? Colors.orange : Colors.grey[600],
                       ),
                     ),
                   ],
@@ -910,7 +978,7 @@ class _ChatBubbleState extends State<_ChatBubble> {
             ),
           ),
 
-          // Action button
+          // Action buttons
           if (_cachedPath != null)
             IconButton(
               icon: const Icon(Icons.open_in_new, color: Color(0xFF075E54)),
@@ -922,10 +990,10 @@ class _ChatBubbleState extends State<_ChatBubble> {
               onPressed: _startDownload,
             )
           else
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.red),
+              onPressed: _cancelDownload,
+              tooltip: 'إلغاء',
             ),
         ],
       ),
@@ -945,36 +1013,81 @@ class _ChatBubbleState extends State<_ChatBubble> {
         children: [
           Icon(icon, size: 48, color: Colors.grey[500]),
           if (_isDownloading)
-            SizedBox(
-              width: 64,
-              height: 64,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: _progress > 0 ? _progress : null,
-                    strokeWidth: 3,
-                    valueColor: const AlwaysStoppedAnimation(Color(0xFF25D366)),
-                  ),
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      color: Colors.white70,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${(_progress * 100).toInt()}%',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress indicator with pause/resume button
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: _progress > 0 ? _progress : null,
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation(
+                          _isPaused ? Colors.orange : const Color(0xFF25D366),
                         ),
                       ),
-                    ),
+                      GestureDetector(
+                        onTap: _isPaused ? _resumeDownload : _pauseDownload,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _isPaused ? Icons.play_arrow : Icons.pause,
+                            color: _isPaused
+                                ? const Color(0xFF25D366)
+                                : const Color(0xFF075E54),
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                // Progress text and cancel button
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _isPaused
+                            ? 'متوقف'
+                            : '${(_progress * 100).toInt()}%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _cancelDownload,
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             )
           else
             GestureDetector(

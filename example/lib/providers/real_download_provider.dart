@@ -17,6 +17,12 @@ class RealDownloadProvider {
   /// Map to track completed file paths.
   final Map<String, String> _completedPaths = {};
 
+  /// Map to track active TransferItems for pause/resume.
+  final Map<String, TransferItem> _activeItems = {};
+
+  /// Map to track paused state for each URL.
+  final Map<String, bool> _pausedState = {};
+
   RealDownloadProvider({
     int maxConcurrent = 3,
     bool autoRetry = true,
@@ -137,12 +143,53 @@ class RealDownloadProvider {
 
   void pause() => _queue.pause();
   void start() => _queue.start();
-  bool cancel(String url) => _queue.cancel(url);
-  void cancelAll() => _queue.cancelAll();
-  bool retry(String url) => _queue.retry(url);
+  bool cancel(String url) {
+    _activeItems.remove(url);
+    _pausedState.remove(url);
+    return _queue.cancel(url);
+  }
+
+  void cancelAll() {
+    _activeItems.clear();
+    _pausedState.clear();
+    _queue.cancelAll();
+  }
+
+  bool retry(String url) {
+    _pausedState.remove(url);
+    return _queue.retry(url);
+  }
+
   bool changePriority(String url, TransferPriority priority) =>
       _queue.changePriority(url, priority);
   bool moveToFront(String url) => _queue.moveToFront(url);
+
+  /// Pauses a specific download.
+  Future<bool> pauseDownload(String url) async {
+    final item = _activeItems[url];
+    if (item == null) return false;
+
+    final result = await _controller.pause(item);
+    if (result) {
+      _pausedState[url] = true;
+    }
+    return result;
+  }
+
+  /// Resumes a specific download.
+  Future<bool> resumeDownload(String url) async {
+    final item = _activeItems[url];
+    if (item == null) return false;
+
+    final result = await _controller.resume(item);
+    if (result) {
+      _pausedState[url] = false;
+    }
+    return result;
+  }
+
+  /// Checks if a download is paused.
+  bool isDownloadPaused(String url) => _pausedState[url] ?? false;
 
   int getQueuePosition(String url) {
     final transfer = _queue.getTransfer(url);
@@ -193,9 +240,14 @@ class RealDownloadProvider {
         case EnqueueInProgress(:final controller):
         case EnqueuePending(:final controller):
           await for (final item in controller.stream) {
+            // Track the item for pause/resume
+            _activeItems[url] = item;
+
             // Check for cancellation
             if (transfer.cancellationToken.isCancelled) {
               await _controller.cancel(item);
+              _activeItems.remove(url);
+              _pausedState.remove(url);
               yield TransferProgress(
                 bytesTransferred: item.transferredBytes,
                 totalBytes: item.expectedFileSize,
@@ -233,6 +285,8 @@ class RealDownloadProvider {
             if (item.isComplete) {
               final filePath = item.filePath;
               _completedPaths[url] = filePath;
+              _activeItems.remove(url);
+              _pausedState.remove(url);
               yield TransferProgress.completed(
                 totalBytes: item.expectedFileSize,
               );
@@ -241,6 +295,8 @@ class RealDownloadProvider {
             }
 
             if (item.isFailed) {
+              _activeItems.remove(url);
+              _pausedState.remove(url);
               yield TransferProgress.failed(
                 bytesTransferred: item.transferredBytes,
                 totalBytes: item.expectedFileSize,
@@ -251,6 +307,8 @@ class RealDownloadProvider {
           }
       }
     } catch (e) {
+      _activeItems.remove(url);
+      _pausedState.remove(url);
       debugPrint('RealDownloadProvider: Error downloading $url: $e');
       yield TransferProgress.failed(errorMessage: e.toString());
     }
