@@ -1,6 +1,14 @@
 /// A Flutter package for managing file download and upload tasks
 /// with progress tracking, caching, and notifications.
 ///
+/// Built using Clean Architecture principles for maintainability and testability.
+///
+/// ## Architecture:
+/// - **Domain Layer**: Business entities, repositories, and use cases
+/// - **Data Layer**: Repository implementations and data sources
+/// - **Infrastructure Layer**: Caching, storage, and permissions
+/// - **Presentation Layer**: Controllers, widgets, and themes
+///
 /// ## Features:
 /// - Download and upload file management with injectable handlers
 /// - Custom upload/download callbacks for any backend provider
@@ -11,6 +19,9 @@
 /// - Customizable widgets for media and documents
 /// - Pause, resume, cancel, and retry operations
 /// - RTL and Dark mode support
+/// - Parallel downloads for faster speeds
+/// - Batch operations
+/// - Shared storage support
 ///
 /// ## Basic Usage:
 /// ```dart
@@ -30,6 +41,24 @@
 ///     });
 ///   // ...
 /// }
+/// ```
+///
+/// ## Clean Architecture Usage:
+/// ```dart
+/// // Initialize the new controller
+/// await TransferController.instance.initialize();
+///
+/// // Download using use cases
+/// final result = await TransferController.instance.download(
+///   url: 'https://example.com/file.pdf',
+/// );
+///
+/// result.fold(
+///   onSuccess: (stream) => stream.listen((entity) {
+///     print('Progress: ${entity.progressPercent}%');
+///   }),
+///   onFailure: (failure) => print('Error: ${failure.message}'),
+/// );
 /// ```
 ///
 /// ## Custom Handlers:
@@ -56,7 +85,30 @@
 /// ```
 library;
 
-// Core exports
+// ═══════════════════════════════════════════════════════════════════════════
+// CLEAN ARCHITECTURE LAYERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Domain Layer - Business logic (pure Dart, no Flutter dependencies)
+export 'src/domain/domain.dart';
+
+// Data Layer - Repository implementations
+export 'src/data/data.dart';
+
+// Infrastructure Layer - Cross-cutting concerns
+export 'src/infrastructure/infrastructure.dart';
+
+// Presentation Layer - UI components
+export 'src/presentation/presentation.dart';
+
+// Core - Shared utilities
+export 'src/core/core.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LEGACY EXPORTS - For backwards compatibility
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Core exports (legacy paths)
 export 'src/core/app_directory.dart';
 export 'src/core/extensions/file_path_extension.dart';
 export 'src/core/extensions/string_extension.dart';
@@ -65,7 +117,7 @@ export 'src/core/task_mutex.dart';
 export 'src/core/transfer_queue_manager.dart';
 export 'src/core/download_queue_manager.dart';
 
-// Controllers
+// Controllers (legacy)
 export 'src/controllers/file_system_controller.dart';
 
 // Models

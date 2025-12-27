@@ -98,6 +98,76 @@ flutter pub get
 | **Database Access** | Full task record management |
 | **Task Hold/Release** | Control task execution timing |
 | **Binary Upload** | Raw bytes upload without multipart |
+| **Clean Architecture** | Restructured codebase with domain, data, infrastructure layers |
+
+### Clean Architecture
+
+The package now follows Clean Architecture principles:
+
+```
+lib/src/
+├── domain/                 # Domain Layer (Business Logic)
+│   ├── entities/           # Business entities (TransferEntity, TransferConfigEntity)
+│   ├── repositories/       # Abstract repository interfaces
+│   ├── usecases/           # Business operations (EnqueueDownload, PauseTransfer, etc.)
+│   └── failures/           # Domain-specific error types
+│
+├── data/                   # Data Layer (Implementation)
+│   ├── datasources/        # External data source wrappers (DownloaderDataSource)
+│   ├── repositories/       # Repository implementations
+│   └── models/             # Data transfer objects (TransferModel)
+│
+├── infrastructure/         # Infrastructure Layer (Cross-cutting)
+│   ├── cache/              # File caching (FileCacheManager)
+│   └── storage/            # File storage (AppDirectory)
+│
+├── presentation/           # Presentation Layer
+│   ├── controllers/        # State controllers (TransferController)
+│   ├── widgets/            # UI widgets
+│   └── theme/              # Theming
+│
+└── core/                   # Core Utilities
+    ├── extensions/         # Dart extensions
+    └── utils/              # Utilities
+```
+
+#### Using Clean Architecture API
+
+```dart
+// Initialize the clean architecture controller
+await TransferController.instance.initialize();
+
+// Download using Result pattern
+final result = await TransferController.instance.download(
+  url: 'https://example.com/file.pdf',
+);
+
+// Handle result functionally
+result.fold(
+  onSuccess: (stream) => stream.listen((entity) {
+    print('Progress: ${entity.progressPercent}%');
+    print('Speed: ${entity.speed} bytes/s');
+  }),
+  onFailure: (failure) => print('Error: ${failure.message}'),
+);
+```
+
+#### Direct Use Case Access
+
+```dart
+// Create use cases with dependency injection
+final repository = TransferRepositoryImpl(...);
+final enqueueDownload = EnqueueDownloadUseCase(repository);
+
+// Execute use case
+final result = await enqueueDownload(EnqueueDownloadParams(
+  url: 'https://example.com/file.pdf',
+  config: TransferConfigEntity(
+    maxRetries: 3,
+    parallelChunks: 4,
+  ),
+));
+```
 | **Multi Upload** | Upload multiple files in single request |
 | **Data Upload** | Upload data from memory |
 | **Task Options** | Lifecycle callbacks (onTaskStart, onTaskFinished) |
