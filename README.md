@@ -376,48 +376,160 @@ for (final transfer in state.pendingTransfers) {
 
 ### Using Queue with Message Widgets
 
-Integrate the queue manager with message widgets to control concurrent downloads:
+The package provides `QueuedTransferProvider` for easy integration with message widgets:
 
 ```dart
-// Create a queued download provider
-class QueuedDownloadProvider {
-  late final TransferQueueManager<DownloadTask> _queue;
+// Option 1: Use with custom download executor
+final provider = QueuedTransferProvider(
+  maxConcurrent: 3,
+  downloadExecutor: (task, token) async* {
+    // Your custom download implementation
+    yield* myHttpClient.download(task.url, token);
+  },
+);
 
-  QueuedDownloadProvider({int maxConcurrent = 3}) {
-    _queue = TransferQueueManager<DownloadTask>(
+// Option 2: Use with DownloadHandler class
+final provider = QueuedTransferProvider.withHandler(
+  maxConcurrent: 3,
+  handler: MyDownloadHandler(),
+);
+
+// Option 3: Use with simple callback
+final provider = QueuedTransferProvider.withCallback(
+  maxConcurrent: 3,
+  onDownload: (payload) async* {
+    yield* myDownloadStream(payload.url);
+  },
+);
+
+// Use with widgets - creates download callback automatically
+ImageMessageTransferWidget(
+  url: 'https://example.com/image1.jpg',
+  onDownload: provider.createDownloadCallback(
+    priority: TransferPriority.high,
+  ),
+)
+
+// Or enqueue manually
+ImageMessageTransferWidget(
+  url: 'https://example.com/image2.jpg',
+  onDownload: (payload) => provider.enqueueDownload(
+    url: payload.url,
+    expectedSize: payload.expectedSize,
+    priority: TransferPriority.normal,
+  ),
+)
+
+// Only 3 downloads will run concurrently
+// Rest will queue automatically
+```
+
+### Real Downloads with FileSystemController
+
+For production apps, use `RealDownloadProvider` which integrates with `FileSystemController`:
+
+```dart
+import 'package:file_system_management/file_system_management.dart';
+
+class RealDownloadProvider {
+  late final TransferQueueManager<RealDownloadTask> _queue;
+  final FileSystemController _controller;
+  final Map<String, String> _completedPaths = {};
+
+  RealDownloadProvider({
+    int maxConcurrent = 3,
+    FileSystemController? controller,
+  }) : _controller = controller ?? FileSystemController.instance {
+    _queue = TransferQueueManager<RealDownloadTask>(
       maxConcurrent: maxConcurrent,
       executor: _executeDownload,
     );
   }
 
-  /// Use this in widget's onDownload callback
-  Stream<TransferProgress> enqueueDownload(DownloadPayload payload) {
-    final task = DownloadTask(url: payload.url, size: payload.expectedSize);
-    final queued = _queue.add(task, id: payload.url);
-    return queued.progressStream;
+  /// Check if file is already cached
+  String? getCachedPath(String url) {
+    final completed = _completedPaths[url];
+    if (completed != null) return completed;
+    return _controller.getCachedPath(url);
   }
 
-  Stream<TransferProgress> _executeDownload(QueuedTransfer<DownloadTask> transfer) async* {
-    // Your download logic here
-    yield* yourDownloadStream(transfer.task.url);
+  Stream<TransferProgress> _executeDownload(
+    QueuedTransfer<RealDownloadTask> transfer,
+  ) async* {
+    final task = transfer.task;
+
+    // Create download task
+    final downloadTask = createDownloadTask(
+      url: task.url,
+      filename: task.fileName,
+    );
+
+    final result = await _controller.enqueueDownload(downloadTask);
+
+    switch (result) {
+      case EnqueueCached(:final filePath):
+        _completedPaths[task.url] = filePath;
+        yield TransferProgress.completed(totalBytes: task.expectedSize ?? 0);
+
+      case EnqueueStarted(:final controller):
+      case EnqueueInProgress(:final controller):
+      case EnqueuePending(:final controller):
+        await for (final item in controller.stream) {
+          if (transfer.cancellationToken.isCancelled) {
+            await _controller.cancel(item);
+            yield TransferProgress(status: TransferStatus.cancelled);
+            return;
+          }
+
+          // Convert TransferItem status to TransferProgress
+          final TransferStatus status;
+          if (item.isComplete) {
+            status = TransferStatus.completed;
+          } else if (item.isRunning) {
+            status = TransferStatus.running;
+          } else if (item.isPaused) {
+            status = TransferStatus.paused;
+          } else if (item.isFailed) {
+            status = TransferStatus.failed;
+          } else {
+            status = TransferStatus.pending;
+          }
+
+          yield TransferProgress(
+            bytesTransferred: item.transferredBytes,
+            totalBytes: item.expectedFileSize,
+            bytesPerSecond: item.networkSpeed,
+            estimatedTimeRemaining: item.timeRemaining,
+            status: status,
+          );
+
+          if (item.isComplete) {
+            _completedPaths[task.url] = item.filePath;
+            return;
+          }
+        }
+    }
   }
 }
 
-// Use with widgets
-final provider = QueuedDownloadProvider(maxConcurrent: 3);
+// Usage
+final provider = RealDownloadProvider(maxConcurrent: 3);
 
 ImageMessageTransferWidget(
-  url: 'https://example.com/image1.jpg',
-  onDownload: (payload) => provider.enqueueDownload(payload),
+  url: 'https://example.com/image.jpg',
+  onDownload: (payload) => provider.enqueueDownload(
+    url: payload.url,
+    expectedSize: payload.expectedSize,
+  ),
+  completedBuilder: (context, path) {
+    // Check cache first
+    final cached = provider.getCachedPath(payload.url);
+    if (cached != null) {
+      return Image.file(File(cached));
+    }
+    return Image.file(File(path));
+  },
 )
-
-ImageMessageTransferWidget(
-  url: 'https://example.com/image2.jpg',
-  onDownload: (payload) => provider.enqueueDownload(payload),
-)
-
-// Only 3 downloads will run concurrently
-// Rest will queue automatically
 ```
 
 ### Queue Status Display

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Queue Management System with Custom Executors
+- `QueuedTransferProvider` - Flexible provider with multiple integration options
+  - Constructor with optional `downloadExecutor` callback
+  - `QueuedTransferProvider.withHandler()` - Integration with `DownloadHandler` classes
+  - `QueuedTransferProvider.withCallback()` - Simple callback-based integration
+  - `createDownloadCallback()` for widget integration
+- `RealDownloadProvider` - Production-ready provider using `FileSystemController`
+  - Real file downloads with progress tracking
+  - Automatic file caching with URL recognition
+  - Cache lookup with `getCachedPath()` and `getCompletedPath()`
+  - Full queue management with pause/resume/cancel/retry
+  - Integration with `background_downloader` package
+
 #### Queue Management System
 - `TransferQueueManager<T>` - Generic queue manager with configurable concurrency
   - Priority-based queue (urgent, high, normal, low)
@@ -52,6 +65,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dynamic concurrent limit adjustment
   - Queue position indicators per message
   - Move to front / cancel controls
+  - Real Firebase Storage URLs demonstration
+  - Multiple file types (images, PDF, video, audio, ZIP)
+
+### Changed
+
+- `DownloadPayload` now includes `headers` property for custom request headers
+- `TransferQueueManager` now exposes `allTransfers` getter for accessing all queued transfers
+- Improved generic type handling in `TransferQueueState<T>` stream
 
 ## [0.2.0] - 2025-12-26
 
