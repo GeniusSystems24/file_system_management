@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-12-27
+
+### ⚠️ Breaking Changes
+
+- Minimum Dart SDK upgraded to 3.5.0
+- Minimum Flutter SDK upgraded to 3.24.0
+- Updated `background_downloader` to ^9.4.3
+
+### Added
+
+#### New background_downloader Features
+- **Parallel Downloads** - `createParallelDownloadTask()` for faster large file downloads
+  - Split files into multiple chunks for simultaneous download
+  - Support for multiple URLs/mirrors
+  - Configurable chunk count
+- **Resume Failed Downloads** - `resumeFailedDownload()` continues from failure point
+  - Works even without `allowPause` enabled
+  - Requires server ETag support
+- **Reschedule Missing Tasks** - `rescheduleMissingTasks()` recovers tasks after crash
+  - Compares database with native downloader
+  - Returns success/failure lists
+- **Skip Existing Files** - `Config.skipExistingFiles` option
+  - Skip downloads if file already exists
+  - Optional minimum size threshold
+- **Foreground Mode** - Run in foreground on Android for longer tasks
+- **Request Timeout** - Configurable timeout duration
+- **Storage Space Check** - `availableSpace()` before downloading large files
+- **Permissions Helper** - `permissions` getter for notifications/storage permissions
+
+#### Enhanced FileSystemController
+- New `initialize()` parameters:
+  - `skipExistingFiles` - Skip if file exists
+  - `skipExistingFilesMinSize` - Size threshold for skipping
+  - `runInForeground` - Android foreground mode
+  - `requestTimeout` - Request timeout duration
+
+#### Enhanced createDownloadTask
+- `priority` - Task priority (0-10)
+- `requiresWiFi` - Require WiFi connection
+- `retries` - Auto-retry count
+- `options` - Advanced TaskOptions (onTaskStart, onTaskFinished, auth)
+
+#### Individual Download Controls
+- `pauseDownload(url)` - Pause specific download
+- `resumeDownload(url)` - Resume specific download
+- `isDownloadPaused(url)` - Check pause state
+- UI controls in example app for pause/resume/cancel
+
+### Changed
+
+- Improved concurrency on mobile (JSON encoding in isolate)
+- Better thread safety with job queue for message execution
+
+---
+
 ## [0.2.1] - 2025-12-27
 
 ### Added

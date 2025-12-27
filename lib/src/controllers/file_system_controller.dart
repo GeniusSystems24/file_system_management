@@ -101,11 +101,29 @@ class FileSystemController {
   ///
   /// Must be called before any other operations.
   /// Safe to call multiple times - will only initialize once.
-  Future<void> initialize() async {
+  ///
+  /// [skipExistingFiles] - If true, skip downloads if file already exists.
+  /// [skipExistingFilesMinSize] - Only skip files larger than this size (bytes).
+  /// [runInForeground] - Run in foreground mode on Android for longer tasks.
+  /// [requestTimeout] - Request timeout duration.
+  Future<void> initialize({
+    bool skipExistingFiles = false,
+    int? skipExistingFilesMinSize,
+    bool runInForeground = false,
+    Duration? requestTimeout,
+  }) async {
     if (_isInitialized) return;
 
     // Configure notifications
     _configureNotifications();
+
+    // Configure downloader with new options
+    await _configureDownloader(
+      skipExistingFiles: skipExistingFiles,
+      skipExistingFilesMinSize: skipExistingFilesMinSize,
+      runInForeground: runInForeground,
+      requestTimeout: requestTimeout,
+    );
 
     // Load previous records from database FIRST (wait for it!)
     await _loadPreviousRecords();
@@ -119,6 +137,42 @@ class FileSystemController {
 
     _isInitialized = true;
     debugPrint('FileSystemController: Initialized');
+  }
+
+  Future<void> _configureDownloader({
+    bool skipExistingFiles = false,
+    int? skipExistingFilesMinSize,
+    bool runInForeground = false,
+    Duration? requestTimeout,
+  }) async {
+    final globalConfig = <(Config, Object)>[];
+    final androidConfig = <(Config, Object)>[];
+
+    // Skip existing files configuration
+    if (skipExistingFiles) {
+      if (skipExistingFilesMinSize != null) {
+        globalConfig.add((Config.skipExistingFiles, skipExistingFilesMinSize));
+      } else {
+        globalConfig.add((Config.skipExistingFiles, true));
+      }
+    }
+
+    // Request timeout
+    if (requestTimeout != null) {
+      globalConfig.add((Config.requestTimeout, requestTimeout));
+    }
+
+    // Run in foreground mode on Android
+    if (runInForeground) {
+      androidConfig.add((Config.runInForeground, Config.always));
+    }
+
+    if (globalConfig.isNotEmpty || androidConfig.isNotEmpty) {
+      await _fileDownloader.configure(
+        globalConfig: globalConfig.isNotEmpty ? globalConfig : null,
+        androidConfig: androidConfig.isNotEmpty ? androidConfig : null,
+      );
+    }
   }
 
   void _configureNotifications() {
@@ -415,6 +469,33 @@ class FileSystemController {
     return false;
   }
 
+  /// Resumes a failed download from where it stopped.
+  ///
+  /// This attempts to continue the download from the point of failure,
+  /// rather than starting from scratch. Only works if the server supports
+  /// range requests (ETag validation).
+  Future<bool> resumeFailedDownload(TransferItem item) async {
+    if (!item.isFailed) return false;
+
+    final task = item.task;
+    if (task is! DownloadTask) return false;
+
+    // Try to resume using the background_downloader's resume capability
+    final result = await _fileDownloader.resume(task);
+    if (result) {
+      _activeTaskUrls.add(item.url);
+    }
+    return result;
+  }
+
+  /// Reschedules tasks that are in the database but not in the native downloader.
+  ///
+  /// This is useful for recovering tasks after app restart or crash.
+  /// Returns two lists: (successfully rescheduled, failed to reschedule).
+  Future<(List<Task>, List<Task>)> rescheduleMissingTasks() async {
+    return await _fileDownloader.rescheduleMissingTasks();
+  }
+
   /// Opens a completed file.
   Future<bool> openFile(TransferItem item) async {
     if (!item.isComplete) return false;
@@ -518,6 +599,40 @@ class FileSystemController {
       error: error,
       paused: paused,
       progressBar: progressBar,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMISSIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Gets the permissions object for checking/requesting permissions.
+  ///
+  /// Use this to request permissions for notifications, storage, etc.
+  /// Example:
+  /// ```dart
+  /// final status = await controller.permissions.status(PermissionType.notifications);
+  /// if (status != PermissionStatus.granted) {
+  ///   await controller.permissions.request(PermissionType.notifications);
+  /// }
+  /// ```
+  Permissions get permissions => _fileDownloader.permissions;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STORAGE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Checks available storage space before download.
+  ///
+  /// Returns the available space in bytes, or null if unavailable.
+  /// Use this to check if there's enough space before starting large downloads.
+  Future<int?> availableSpace({
+    BaseDirectory baseDirectory = BaseDirectory.applicationDocuments,
+    String directory = '',
+  }) async {
+    return await _fileDownloader.availableSpace(
+      baseDirectory: baseDirectory,
+      directory: directory,
     );
   }
 
@@ -635,6 +750,20 @@ class FileSystemController {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// Creates a download task with standard configuration.
+///
+/// [url] - The URL to download from.
+/// [filename] - Optional filename (defaults to URL hash).
+/// [directory] - Directory path relative to baseDirectory.
+/// [baseDirectory] - Base directory for the download.
+/// [allowPause] - Allow pausing the download.
+/// [updates] - What updates to receive.
+/// [group] - Task group for notifications.
+/// [headers] - Custom HTTP headers.
+/// [metaData] - Custom metadata string.
+/// [priority] - Task priority (0-10, higher = more priority).
+/// [requiresWiFi] - Require WiFi connection.
+/// [retries] - Number of retries on failure.
+/// [options] - Advanced task options.
 DownloadTask createDownloadTask({
   required String url,
   String? filename,
@@ -645,6 +774,10 @@ DownloadTask createDownloadTask({
   String? group,
   Map<String, String>? headers,
   String? metaData,
+  int priority = 5,
+  bool requiresWiFi = false,
+  int retries = 0,
+  TaskOptions? options,
 }) {
   return DownloadTask(
     url: url,
@@ -656,6 +789,60 @@ DownloadTask createDownloadTask({
     group: group ?? FileDownloader.defaultGroup,
     headers: headers ?? {},
     metaData: metaData ?? '',
+    priority: priority,
+    requiresWiFi: requiresWiFi,
+    retries: retries,
+    options: options,
+  );
+}
+
+/// Creates a parallel download task for faster downloads of large files.
+///
+/// Parallel downloads split the file into multiple chunks and download
+/// them simultaneously, which can significantly speed up large file downloads.
+///
+/// [url] - The URL to download from (or primary URL if using multiple).
+/// [urls] - Optional list of URLs for different chunks/mirrors.
+/// [chunks] - Number of parallel chunks (default: 4).
+/// [filename] - Optional filename (defaults to URL hash).
+/// [directory] - Directory path relative to baseDirectory.
+/// [baseDirectory] - Base directory for the download.
+/// [updates] - What updates to receive.
+/// [group] - Task group for notifications.
+/// [headers] - Custom HTTP headers.
+/// [metaData] - Custom metadata string.
+/// [priority] - Task priority (0-10, higher = more priority).
+/// [requiresWiFi] - Require WiFi connection.
+/// [retries] - Number of retries on failure.
+ParallelDownloadTask createParallelDownloadTask({
+  required String url,
+  List<String>? urls,
+  int chunks = 4,
+  String? filename,
+  String directory = "",
+  BaseDirectory baseDirectory = BaseDirectory.temporary,
+  Updates updates = Updates.statusAndProgress,
+  String? group,
+  Map<String, String>? headers,
+  String? metaData,
+  int priority = 5,
+  bool requiresWiFi = false,
+  int retries = 0,
+}) {
+  return ParallelDownloadTask(
+    url: url,
+    urls: urls,
+    chunks: chunks,
+    filename: filename ?? url.toHashName(),
+    updates: updates,
+    directory: directory,
+    baseDirectory: baseDirectory,
+    group: group ?? FileDownloader.defaultGroup,
+    headers: headers ?? {},
+    metaData: metaData ?? '',
+    priority: priority,
+    requiresWiFi: requiresWiFi,
+    retries: retries,
   );
 }
 
