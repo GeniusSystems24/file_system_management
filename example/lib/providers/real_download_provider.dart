@@ -1,15 +1,13 @@
 import 'dart:async';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:file_system_management/file_system_management.dart';
 import 'package:flutter/foundation.dart';
 
-/// Provider that uses FileSystemController for real downloads with queue management.
+/// Provider that uses TransferController for real downloads.
 ///
 /// This provider integrates with the actual download system and caching.
 class RealDownloadProvider {
-  late final TransferQueueManager<RealDownloadTask> _queue;
-  final FileSystemController _controller;
+  final TransferController _controller;
 
   /// Map to track active streams for each URL.
   final Map<String, StreamController<TransferProgress>> _activeStreams = {};
@@ -17,50 +15,32 @@ class RealDownloadProvider {
   /// Map to track completed file paths.
   final Map<String, String> _completedPaths = {};
 
-  /// Map to track active TransferItems for pause/resume.
-  final Map<String, TransferItem> _activeItems = {};
-
-  /// Map to track paused state for each URL.
-  final Map<String, bool> _pausedState = {};
+  /// Map to track active entities for pause/resume.
+  final Map<String, TransferEntity> _activeEntities = {};
 
   RealDownloadProvider({
-    int maxConcurrent = 3,
-    bool autoRetry = true,
-    int maxRetries = 2,
-    FileSystemController? controller,
-  }) : _controller = controller ?? FileSystemController.instance {
-    _queue = TransferQueueManager<RealDownloadTask>(
-      maxConcurrent: maxConcurrent,
-      autoRetry: autoRetry,
-      maxRetries: maxRetries,
-      executor: _executeDownload,
-    );
-  }
+    TransferController? controller,
+  }) : _controller = controller ?? TransferController.instance;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GETTERS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  int get maxConcurrent => _queue.maxConcurrent;
-  set maxConcurrent(int value) => _queue.maxConcurrent = value;
-  int get runningCount => _queue.runningCount;
-  int get pendingCount => _queue.pendingCount;
-  int get totalCount => _queue.totalCount;
-  bool get isPaused => _queue.isPaused;
-  Stream<TransferQueueState<RealDownloadTask>> get stateStream => _queue.stateStream;
-  TransferQueueState<RealDownloadTask> get state => _queue.state;
-
   /// Gets the cached file path for a URL (if completed).
   String? getCompletedPath(String url) => _completedPaths[url];
 
   /// Checks if a file is already cached.
-  String? getCachedPath(String url) {
+  Future<String?> getCachedPath(String url) async {
     // Check our completed paths first
     final completed = _completedPaths[url];
     if (completed != null) return completed;
 
     // Check the controller's cache
-    return _controller.getCachedPath(url);
+    final result = await _controller.getCachedPath(url);
+    return result.fold(
+      onSuccess: (path) => path,
+      onFailure: (_) => null,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -72,7 +52,6 @@ class RealDownloadProvider {
     required String url,
     String? fileName,
     int? expectedSize,
-    TransferPriority priority = TransferPriority.normal,
   }) {
     // Check if already completed
     if (_completedPaths.containsKey(url)) {
@@ -80,60 +59,121 @@ class RealDownloadProvider {
     }
 
     // Create a stream controller for this download
-    final controller = StreamController<TransferProgress>.broadcast();
-    _activeStreams[url] = controller;
+    final progressController = StreamController<TransferProgress>.broadcast();
+    _activeStreams[url] = progressController;
 
-    // Create the task
-    final task = RealDownloadTask(
-      url: url,
-      fileName: fileName,
-      expectedSize: expectedSize,
-    );
+    // Start the download
+    _startDownload(url, fileName, progressController);
 
-    // Add to queue
-    final queuedTransfer = _queue.add(task, id: url, priority: priority);
+    return progressController.stream;
+  }
 
-    // Forward progress from queued transfer to widget stream
-    queuedTransfer.progressStream.listen(
-      (progress) {
-        if (!controller.isClosed) {
-          controller.add(progress);
-        }
-      },
-      onDone: () {
-        if (!controller.isClosed) {
-          controller.close();
-        }
-        _activeStreams.remove(url);
-      },
-      onError: (error) {
-        if (!controller.isClosed) {
-          controller.addError(error);
-          controller.close();
-        }
-        _activeStreams.remove(url);
-      },
-    );
-
+  Future<void> _startDownload(
+    String url,
+    String? fileName,
+    StreamController<TransferProgress> progressController,
+  ) async {
     // Emit initial pending status
-    controller.add(TransferProgress(
+    progressController.add(const TransferProgress(
       bytesTransferred: 0,
-      totalBytes: expectedSize ?? -1,
+      totalBytes: -1,
       status: TransferStatus.pending,
     ));
 
-    return controller.stream;
+    final result = await _controller.download(
+      url: url,
+      fileName: fileName,
+    );
+
+    result.fold(
+      onSuccess: (stream) {
+        stream.listen(
+          (entity) {
+            // Track the entity for pause/resume
+            _activeEntities[url] = entity;
+
+            // Convert to TransferProgress
+            final TransferStatus status;
+            if (entity.isComplete) {
+              status = TransferStatus.completed;
+            } else if (entity.isRunning) {
+              status = TransferStatus.running;
+            } else if (entity.isPaused) {
+              status = TransferStatus.paused;
+            } else if (entity.isFailed) {
+              status = TransferStatus.failed;
+            } else {
+              status = TransferStatus.pending;
+            }
+
+            final progress = TransferProgress(
+              bytesTransferred: entity.transferredBytes,
+              totalBytes: entity.expectedSize,
+              bytesPerSecond: entity.speed,
+              estimatedTimeRemaining: entity.timeRemaining,
+              status: status,
+              errorMessage: entity.errorMessage,
+            );
+
+            if (!progressController.isClosed) {
+              progressController.add(progress);
+            }
+
+            // Check for terminal states
+            if (entity.isComplete) {
+              _completedPaths[url] = entity.filePath;
+              _activeEntities.remove(url);
+              if (!progressController.isClosed) {
+                progressController.add(TransferProgress.completed(
+                  totalBytes: entity.expectedSize,
+                ));
+                progressController.close();
+              }
+              _activeStreams.remove(url);
+              debugPrint('RealDownloadProvider: Completed $url');
+            }
+
+            if (entity.isFailed) {
+              _activeEntities.remove(url);
+              if (!progressController.isClosed) {
+                progressController.add(TransferProgress.failed(
+                  bytesTransferred: entity.transferredBytes,
+                  totalBytes: entity.expectedSize,
+                  errorMessage: entity.errorMessage ?? 'Download failed',
+                ));
+                progressController.close();
+              }
+              _activeStreams.remove(url);
+            }
+          },
+          onError: (error) {
+            _activeEntities.remove(url);
+            if (!progressController.isClosed) {
+              progressController.addError(error);
+              progressController.close();
+            }
+            _activeStreams.remove(url);
+          },
+        );
+      },
+      onFailure: (failure) {
+        if (!progressController.isClosed) {
+          progressController.add(TransferProgress.failed(
+            errorMessage: failure.message,
+          ));
+          progressController.close();
+        }
+        _activeStreams.remove(url);
+      },
+    );
   }
 
   /// Creates a download callback for use with widgets.
-  Stream<TransferProgress> Function(DownloadPayload payload) createDownloadCallback({
-    TransferPriority priority = TransferPriority.normal,
-  }) {
+  Stream<TransferProgress> Function(DownloadPayload payload) createDownloadCallback() {
     return (payload) => enqueueDownload(
           url: payload.url,
           fileName: payload.fileName,
           expectedSize: payload.expectedSize,
-          priority: priority,
         );
   }
 
@@ -141,177 +181,64 @@ class RealDownloadProvider {
   // CONTROL OPERATIONS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  void pause() => _queue.pause();
-  void start() => _queue.start();
-  bool cancel(String url) {
-    _activeItems.remove(url);
-    _pausedState.remove(url);
-    return _queue.cancel(url);
-  }
-
-  void cancelAll() {
-    _activeItems.clear();
-    _pausedState.clear();
-    _queue.cancelAll();
-  }
-
-  bool retry(String url) {
-    _pausedState.remove(url);
-    return _queue.retry(url);
-  }
-
-  bool changePriority(String url, TransferPriority priority) =>
-      _queue.changePriority(url, priority);
-  bool moveToFront(String url) => _queue.moveToFront(url);
-
   /// Pauses a specific download.
   Future<bool> pauseDownload(String url) async {
-    final item = _activeItems[url];
-    if (item == null) return false;
+    final entity = _activeEntities[url];
+    if (entity == null) return false;
 
-    final result = await _controller.pause(item);
-    if (result) {
-      _pausedState[url] = true;
-    }
-    return result;
+    final result = await _controller.pause(entity.id);
+    return result.fold(
+      onSuccess: (success) => success,
+      onFailure: (_) => false,
+    );
   }
 
   /// Resumes a specific download.
   Future<bool> resumeDownload(String url) async {
-    final item = _activeItems[url];
-    if (item == null) return false;
+    final entity = _activeEntities[url];
+    if (entity == null) return false;
 
-    final result = await _controller.resume(item);
-    if (result) {
-      _pausedState[url] = false;
+    final result = await _controller.resume(entity.id);
+    return result.fold(
+      onSuccess: (success) => success,
+      onFailure: (_) => false,
+    );
+  }
+
+  /// Cancels a specific download.
+  Future<bool> cancelDownload(String url) async {
+    final entity = _activeEntities[url];
+    if (entity == null) return false;
+
+    final result = await _controller.cancel(entity.id);
+    _activeEntities.remove(url);
+
+    final streamController = _activeStreams.remove(url);
+    if (streamController != null && !streamController.isClosed) {
+      streamController.add(const TransferProgress(
+        bytesTransferred: 0,
+        totalBytes: 0,
+        status: TransferStatus.cancelled,
+      ));
+      streamController.close();
     }
-    return result;
+
+    return result.fold(
+      onSuccess: (success) => success,
+      onFailure: (_) => false,
+    );
   }
 
   /// Checks if a download is paused.
-  bool isDownloadPaused(String url) => _pausedState[url] ?? false;
-
-  int getQueuePosition(String url) {
-    final transfer = _queue.getTransfer(url);
-    return transfer?.queuePosition ?? -1;
+  bool isDownloadPaused(String url) {
+    final entity = _activeEntities[url];
+    return entity?.isPaused ?? false;
   }
 
+  /// Checks if a URL is currently downloading.
   bool isDownloading(String url) {
-    final transfer = _queue.getTransfer(url);
-    return transfer?.isRunning ?? false;
-  }
-
-  bool isQueued(String url) {
-    final transfer = _queue.getTransfer(url);
-    return transfer?.isQueued ?? false;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // EXECUTOR
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Executes the download using FileSystemController.
-  Stream<TransferProgress> _executeDownload(
-    QueuedTransfer<RealDownloadTask> transfer,
-  ) async* {
-    final task = transfer.task;
-    final url = task.url;
-
-    debugPrint('RealDownloadProvider: Starting download $url');
-
-    try {
-      // Create download task
-      final downloadTask = createDownloadTask(
-        url: url,
-        filename: task.fileName,
-      );
-
-      final result = await _controller.enqueueDownload(downloadTask);
-
-      switch (result) {
-        case EnqueueCached(:final filePath):
-          // Already cached
-          _completedPaths[url] = filePath;
-          yield TransferProgress.completed(totalBytes: task.expectedSize ?? 0);
-          debugPrint('RealDownloadProvider: Cached $url -> $filePath');
-          return;
-
-        case EnqueueStarted(:final controller):
-        case EnqueueInProgress(:final controller):
-        case EnqueuePending(:final controller):
-          await for (final item in controller.stream) {
-            // Track the item for pause/resume
-            _activeItems[url] = item;
-
-            // Check for cancellation
-            if (transfer.cancellationToken.isCancelled) {
-              await _controller.cancel(item);
-              _activeItems.remove(url);
-              _pausedState.remove(url);
-              yield TransferProgress(
-                bytesTransferred: item.transferredBytes,
-                totalBytes: item.expectedFileSize,
-                status: TransferStatus.cancelled,
-              );
-              return;
-            }
-
-            // Convert to TransferProgress using TransferItem's boolean helpers
-            final TransferStatus status;
-            if (item.isComplete) {
-              status = TransferStatus.completed;
-            } else if (item.isRunning) {
-              status = TransferStatus.running;
-            } else if (item.isPaused) {
-              status = TransferStatus.paused;
-            } else if (item.isFailed) {
-              status = TransferStatus.failed;
-            } else {
-              status = TransferStatus.pending;
-            }
-
-            final progress = TransferProgress(
-              bytesTransferred: item.transferredBytes,
-              totalBytes: item.expectedFileSize,
-              bytesPerSecond: item.networkSpeed,
-              estimatedTimeRemaining: item.timeRemaining,
-              status: status,
-              errorMessage: item.exception?.description,
-            );
-
-            yield progress;
-
-            // Check for terminal states
-            if (item.isComplete) {
-              final filePath = item.filePath;
-              _completedPaths[url] = filePath;
-              _activeItems.remove(url);
-              _pausedState.remove(url);
-              yield TransferProgress.completed(
-                totalBytes: item.expectedFileSize,
-              );
-              debugPrint('RealDownloadProvider: Completed $url -> $filePath');
-              return;
-            }
-
-            if (item.isFailed) {
-              _activeItems.remove(url);
-              _pausedState.remove(url);
-              yield TransferProgress.failed(
-                bytesTransferred: item.transferredBytes,
-                totalBytes: item.expectedFileSize,
-                errorMessage: item.exception?.description ?? 'Download failed',
-              );
-              return;
-            }
-          }
-      }
-    } catch (e) {
-      _activeItems.remove(url);
-      _pausedState.remove(url);
-      debugPrint('RealDownloadProvider: Error downloading $url: $e');
-      yield TransferProgress.failed(errorMessage: e.toString());
-    }
+    final entity = _activeEntities[url];
+    return entity?.isRunning ?? false;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -323,19 +250,6 @@ class RealDownloadProvider {
       controller.close();
     }
     _activeStreams.clear();
-    _queue.dispose();
+    _activeEntities.clear();
   }
-}
-
-/// Task for real downloads.
-class RealDownloadTask {
-  final String url;
-  final String? fileName;
-  final int? expectedSize;
-
-  const RealDownloadTask({
-    required this.url,
-    this.fileName,
-    this.expectedSize,
-  });
 }

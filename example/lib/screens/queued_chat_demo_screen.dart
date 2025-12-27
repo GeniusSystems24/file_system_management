@@ -26,14 +26,13 @@ class QueuedChatDemoScreen extends StatefulWidget {
 
 class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
   late RealDownloadProvider _provider;
-  int _maxConcurrent = 2;
 
   final List<_ChatMessage> _messages = [];
 
   @override
   void initState() {
     super.initState();
-    _provider = RealDownloadProvider(maxConcurrent: _maxConcurrent);
+    _provider = RealDownloadProvider();
     _generateMessages();
   }
 
@@ -170,35 +169,22 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFECE5DD),
       appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          // Queue status bar
-          _buildQueueStatusBar(),
-
-          // Concurrent control
-          _buildConcurrentSlider(),
-
-          // Chat messages
-          Expanded(
-            child: DecoratedBox(
-              // WhatsApp-like chat background
-              decoration: const BoxDecoration(
-                color: Color(0xFFECE5DD),
-              ),
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 16,
-                ),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) => _buildMessage(
-                  _messages[index],
-                  index,
-                ),
-              ),
-            ),
+      body: DecoratedBox(
+        // WhatsApp-like chat background
+        decoration: const BoxDecoration(
+          color: Color(0xFFECE5DD),
+        ),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 16,
           ),
-        ],
+          itemCount: _messages.length,
+          itemBuilder: (context, index) => _buildMessage(
+            _messages[index],
+            index,
+          ),
+        ),
       ),
     );
   }
@@ -233,184 +219,11 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
       ),
       actions: [
         IconButton(
-          icon: Icon(_provider.isPaused ? Icons.play_arrow : Icons.pause),
-          onPressed: () {
-            setState(() {
-              if (_provider.isPaused) {
-                _provider.start();
-              } else {
-                _provider.pause();
-              }
-            });
-          },
-          tooltip: _provider.isPaused ? 'استمرار' : 'إيقاف مؤقت',
-        ),
-        IconButton(
           icon: const Icon(Icons.download),
           onPressed: _downloadAll,
           tooltip: 'تنزيل الكل',
         ),
-        PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'cancel_all') {
-              _provider.cancelAll();
-              setState(() {});
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'cancel_all',
-              child: Row(
-                children: [
-                  Icon(Icons.cancel, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('إلغاء الكل'),
-                ],
-              ),
-            ),
-          ],
-        ),
       ],
-    );
-  }
-
-  Widget _buildQueueStatusBar() {
-    return StreamBuilder<TransferQueueState<RealDownloadTask>>(
-      stream: _provider.stateStream,
-      builder: (context, snapshot) {
-        final state = snapshot.data ?? _provider.state;
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: const Color(0xFF075E54).withValues(alpha: 0.1),
-          child: Row(
-            children: [
-              _buildStatusBadge(
-                'جاري',
-                state.runningCount,
-                const Color(0xFF25D366),
-              ),
-              const SizedBox(width: 8),
-              _buildStatusBadge(
-                'انتظار',
-                state.pendingCount,
-                Colors.orange,
-              ),
-              const Spacer(),
-              if (state.totalCount > 0) ...[
-                Text(
-                  '${(state.overallProgress * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF075E54),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 80,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: state.overallProgress,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: const AlwaysStoppedAnimation(
-                        Color(0xFF25D366),
-                      ),
-                      minHeight: 6,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatusBadge(String label, int count, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$count $label',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConcurrentSlider() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      color: Colors.white,
-      child: Row(
-        children: [
-          const Icon(Icons.speed, size: 20, color: Color(0xFF075E54)),
-          const SizedBox(width: 8),
-          const Text('السرعة:', style: TextStyle(fontSize: 13)),
-          Expanded(
-            child: SliderTheme(
-              data: SliderThemeData(
-                activeTrackColor: const Color(0xFF25D366),
-                inactiveTrackColor: Colors.grey[300],
-                thumbColor: const Color(0xFF075E54),
-                overlayColor: const Color(0xFF25D366).withValues(alpha: 0.2),
-              ),
-              child: Slider(
-                value: _maxConcurrent.toDouble(),
-                min: 1,
-                max: 5,
-                divisions: 4,
-                label: '$_maxConcurrent',
-                onChanged: (value) {
-                  setState(() {
-                    _maxConcurrent = value.round();
-                    _provider.maxConcurrent = _maxConcurrent;
-                  });
-                },
-              ),
-            ),
-          ),
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFF075E54),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              '$_maxConcurrent',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -486,7 +299,7 @@ class _ChatBubbleState extends State<_ChatBubble> {
   }
 
   Future<void> _checkCache() async {
-    final path = widget.provider.getCachedPath(widget.message.url);
+    final path = await widget.provider.getCachedPath(widget.message.url);
     if (path != null && mounted) {
       setState(() => _cachedPath = path);
       _initializePlayer(path);
@@ -601,7 +414,7 @@ class _ChatBubbleState extends State<_ChatBubble> {
   }
 
   void _cancelDownload() {
-    widget.provider.cancel(widget.message.url);
+    widget.provider.cancelDownload(widget.message.url);
     if (mounted) {
       setState(() {
         _isDownloading = false;

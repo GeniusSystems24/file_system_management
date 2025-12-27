@@ -13,8 +13,8 @@ void main() async {
   // Initialize directories
   await AppDirectory.init();
 
-  // Initialize the file system controller
-  await FileSystemController.instance.initialize();
+  // Initialize the transfer controller
+  await TransferController.instance.initialize();
 
   runApp(const ExampleApp());
 }
