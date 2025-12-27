@@ -41,6 +41,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransferQueueState<T>` - Queue state snapshot with statistics
 - `TransferQueueResult<T>` - Result wrapper for completed transfers
 
+#### Queue Integration with Message Widgets
+- `QueuedTransferProvider` - Provider for integrating queue with message widgets
+  - `enqueueDownload()` - Enqueue downloads from widget callbacks
+  - `createDownloadCallback()` - Create reusable download callbacks
+  - Queue position tracking per widget
+  - Priority support for widget downloads
+- `QueuedChatDemoScreen` - Example screen demonstrating queue with widgets
+  - Real-time queue status display
+  - Dynamic concurrent limit adjustment
+  - Queue position indicators per message
+  - Move to front / cancel controls
+
 ## [0.2.0] - 2025-12-26
 
 ### Added
