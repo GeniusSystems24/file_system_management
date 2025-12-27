@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:background_downloader/background_downloader.dart';
 import 'package:file_system_management/file_system_management.dart';
 import 'package:flutter/foundation.dart';
 
@@ -48,8 +48,13 @@ class RealDownloadProvider {
   String? getCompletedPath(String url) => _completedPaths[url];
 
   /// Checks if a file is already cached.
-  Future<String?> getCachedPath(String url) async {
-    return await _controller.getFilePath(url);
+  String? getCachedPath(String url) {
+    // Check our completed paths first
+    final completed = _completedPaths[url];
+    if (completed != null) return completed;
+
+    // Check the controller's cache
+    return _controller.getCachedPath(url);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -199,13 +204,26 @@ class RealDownloadProvider {
               return;
             }
 
-            // Convert to TransferProgress
+            // Convert to TransferProgress using TransferItem's boolean helpers
+            final TransferStatus status;
+            if (item.isComplete) {
+              status = TransferStatus.completed;
+            } else if (item.isRunning) {
+              status = TransferStatus.running;
+            } else if (item.isPaused) {
+              status = TransferStatus.paused;
+            } else if (item.isFailed) {
+              status = TransferStatus.failed;
+            } else {
+              status = TransferStatus.pending;
+            }
+
             final progress = TransferProgress(
               bytesTransferred: item.transferredBytes,
               totalBytes: item.expectedFileSize,
               bytesPerSecond: item.networkSpeed,
               estimatedTimeRemaining: item.timeRemaining,
-              status: _convertStatus(item.status),
+              status: status,
               errorMessage: item.exception?.description,
             );
 
@@ -214,9 +232,7 @@ class RealDownloadProvider {
             // Check for terminal states
             if (item.isComplete) {
               final filePath = item.filePath;
-              if (filePath != null) {
-                _completedPaths[url] = filePath;
-              }
+              _completedPaths[url] = filePath;
               yield TransferProgress.completed(
                 totalBytes: item.expectedFileSize,
               );
@@ -238,19 +254,6 @@ class RealDownloadProvider {
       debugPrint('RealDownloadProvider: Error downloading $url: $e');
       yield TransferProgress.failed(errorMessage: e.toString());
     }
-  }
-
-  TransferStatus _convertStatus(TaskStatus status) {
-    return switch (status) {
-      TaskStatus.enqueued => TransferStatus.pending,
-      TaskStatus.running => TransferStatus.running,
-      TaskStatus.paused => TransferStatus.paused,
-      TaskStatus.complete => TransferStatus.completed,
-      TaskStatus.failed => TransferStatus.failed,
-      TaskStatus.canceled => TransferStatus.cancelled,
-      TaskStatus.waitingToRetry => TransferStatus.waitingToRetry,
-      TaskStatus.notFound => TransferStatus.failed,
-    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
