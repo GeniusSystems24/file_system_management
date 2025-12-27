@@ -9,25 +9,57 @@ class WidgetDownloadTask {
   final String url;
   final String? fileName;
   final int? expectedSize;
+  final String? destinationPath;
+  final Map<String, String>? headers;
   final Map<String, dynamic>? metadata;
 
   const WidgetDownloadTask({
     required this.url,
     this.fileName,
     this.expectedSize,
+    this.destinationPath,
+    this.headers,
     this.metadata,
   });
+
+  /// Converts to DownloadPayload for use with handlers.
+  DownloadPayload toPayload() => DownloadPayload(
+        url: url,
+        fileName: fileName,
+        expectedSize: expectedSize,
+        destinationPath: destinationPath,
+        headers: headers,
+      );
 }
+
+/// Callback type for executing a download.
+typedef DownloadExecutor = Stream<TransferProgress> Function(
+  WidgetDownloadTask task,
+  CancellationToken cancellationToken,
+);
 
 /// Provider that manages queued downloads for widgets.
 ///
 /// This provider integrates the queue manager with message widgets,
 /// allowing you to control concurrent downloads across multiple widgets.
 ///
-/// Example:
+/// Example with custom executor:
 /// ```dart
-/// // Create a provider with max 3 concurrent downloads
-/// final provider = QueuedTransferProvider(maxConcurrent: 3);
+/// // Create a provider with custom download logic
+/// final provider = QueuedTransferProvider(
+///   maxConcurrent: 3,
+///   downloadExecutor: (task, token) async* {
+///     // Your download implementation
+///     yield* myHttpClient.download(task.url, token);
+///   },
+/// );
+///
+/// // Or use with DownloadHandler
+/// final handler = MyDownloadHandler();
+/// final provider = QueuedTransferProvider.withHandler(
+///   maxConcurrent: 3,
+///   handler: handler,
+/// );
 ///
 /// // Use in a widget
 /// ImageMessageTransferWidget(
@@ -37,29 +69,80 @@ class WidgetDownloadTask {
 ///     expectedSize: payload.expectedSize,
 ///   ),
 /// )
-///
-/// // Listen to queue state
-/// provider.stateStream.listen((state) {
-///   print('Downloads: ${state.runningCount}/${state.maxConcurrent}');
-/// });
 /// ```
 class QueuedTransferProvider {
   late final TransferQueueManager<WidgetDownloadTask> _queue;
+  final DownloadExecutor? _customExecutor;
+  final DownloadHandler? _handler;
   final Random _random = Random();
 
   /// Map to track active streams for each URL.
   final Map<String, StreamController<TransferProgress>> _activeStreams = {};
 
+  /// Creates a provider with optional custom download executor.
+  ///
+  /// If [downloadExecutor] is not provided, uses mock downloads for demo.
   QueuedTransferProvider({
     int maxConcurrent = 3,
     bool autoRetry = true,
     int maxRetries = 2,
-  }) {
+    DownloadExecutor? downloadExecutor,
+  })  : _customExecutor = downloadExecutor,
+        _handler = null {
     _queue = TransferQueueManager<WidgetDownloadTask>(
       maxConcurrent: maxConcurrent,
       autoRetry: autoRetry,
       maxRetries: maxRetries,
       executor: _executeDownload,
+    );
+  }
+
+  /// Creates a provider with a DownloadHandler.
+  ///
+  /// Example:
+  /// ```dart
+  /// final provider = QueuedTransferProvider.withHandler(
+  ///   maxConcurrent: 3,
+  ///   handler: MyDownloadHandler(),
+  /// );
+  /// ```
+  QueuedTransferProvider.withHandler({
+    int maxConcurrent = 3,
+    bool autoRetry = true,
+    int maxRetries = 2,
+    required DownloadHandler handler,
+  })  : _customExecutor = null,
+        _handler = handler {
+    _queue = TransferQueueManager<WidgetDownloadTask>(
+      maxConcurrent: maxConcurrent,
+      autoRetry: autoRetry,
+      maxRetries: maxRetries,
+      executor: _executeDownload,
+    );
+  }
+
+  /// Creates a provider with a callback function.
+  ///
+  /// Example:
+  /// ```dart
+  /// final provider = QueuedTransferProvider.withCallback(
+  ///   maxConcurrent: 3,
+  ///   onDownload: (payload) async* {
+  ///     yield* myDownloadStream(payload.url);
+  ///   },
+  /// );
+  /// ```
+  factory QueuedTransferProvider.withCallback({
+    int maxConcurrent = 3,
+    bool autoRetry = true,
+    int maxRetries = 2,
+    required Stream<TransferProgress> Function(DownloadPayload payload) onDownload,
+  }) {
+    return QueuedTransferProvider(
+      maxConcurrent: maxConcurrent,
+      autoRetry: autoRetry,
+      maxRetries: maxRetries,
+      downloadExecutor: (task, token) => onDownload(task.toPayload()),
     );
   }
 
@@ -78,6 +161,9 @@ class QueuedTransferProvider {
 
   /// Number of downloads waiting in queue.
   int get pendingCount => _queue.pendingCount;
+
+  /// Total count of all downloads.
+  int get totalCount => _queue.totalCount;
 
   /// Whether the queue is paused.
   bool get isPaused => _queue.isPaused;
@@ -109,6 +195,8 @@ class QueuedTransferProvider {
     required String url,
     String? fileName,
     int? expectedSize,
+    String? destinationPath,
+    Map<String, String>? headers,
     TransferPriority priority = TransferPriority.normal,
     Map<String, dynamic>? metadata,
   }) {
@@ -121,6 +209,8 @@ class QueuedTransferProvider {
       url: url,
       fileName: fileName,
       expectedSize: expectedSize,
+      destinationPath: destinationPath,
+      headers: headers,
       metadata: metadata,
     );
 
@@ -159,6 +249,21 @@ class QueuedTransferProvider {
     return controller.stream;
   }
 
+  /// Enqueues a download from a DownloadPayload.
+  Stream<TransferProgress> enqueueFromPayload(
+    DownloadPayload payload, {
+    TransferPriority priority = TransferPriority.normal,
+  }) {
+    return enqueueDownload(
+      url: payload.url,
+      fileName: payload.fileName,
+      expectedSize: payload.expectedSize,
+      destinationPath: payload.destinationPath,
+      headers: payload.headers,
+      priority: priority,
+    );
+  }
+
   /// Creates a download callback for use with widgets.
   ///
   /// Example:
@@ -173,12 +278,7 @@ class QueuedTransferProvider {
   Stream<TransferProgress> Function(DownloadPayload payload) createDownloadCallback({
     TransferPriority priority = TransferPriority.normal,
   }) {
-    return (payload) => enqueueDownload(
-      url: payload.url,
-      fileName: payload.fileName,
-      expectedSize: payload.expectedSize,
-      priority: priority,
-    );
+    return (payload) => enqueueFromPayload(payload, priority: priority);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -225,25 +325,53 @@ class QueuedTransferProvider {
     return transfer?.isQueued ?? false;
   }
 
+  /// Gets a transfer by URL.
+  QueuedTransfer<WidgetDownloadTask>? getTransfer(String url) =>
+      _queue.getTransfer(url);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // EXECUTOR
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Executes the download (simulated for demo purposes).
+  /// Executes the download using the configured executor.
   Stream<TransferProgress> _executeDownload(
+    QueuedTransfer<WidgetDownloadTask> transfer,
+  ) async* {
+    final task = transfer.task;
+
+    debugPrint('QueuedTransferProvider: Starting download ${task.url}');
+
+    // Use custom executor if provided
+    if (_customExecutor != null) {
+      yield* _customExecutor!(task, transfer.cancellationToken);
+      return;
+    }
+
+    // Use handler if provided
+    if (_handler != null) {
+      yield* _handler!.download(
+        task.toPayload(),
+        cancellationToken: transfer.cancellationToken,
+      );
+      return;
+    }
+
+    // Fallback to mock download
+    yield* _mockDownload(transfer);
+  }
+
+  /// Mock download for demo purposes.
+  Stream<TransferProgress> _mockDownload(
     QueuedTransfer<WidgetDownloadTask> transfer,
   ) async* {
     final task = transfer.task;
     final totalBytes = task.expectedSize ?? 1024 * 1024;
     const steps = 20;
     final stepDuration = Duration(
-      milliseconds: 100 + _random.nextInt(200), // 100-300ms per step
+      milliseconds: 100 + _random.nextInt(200),
     );
 
-    debugPrint('QueuedTransferProvider: Starting download ${task.url}');
-
     for (int i = 1; i <= steps; i++) {
-      // Check for cancellation
       if (transfer.cancellationToken.isCancelled) {
         yield TransferProgress(
           bytesTransferred: (totalBytes * (i - 1) / steps).round(),
@@ -266,7 +394,8 @@ class QueuedTransferProvider {
       }
 
       final bytesTransferred = (totalBytes * i / steps).round();
-      final bytesPerSecond = totalBytes / (steps * stepDuration.inMilliseconds / 1000);
+      final bytesPerSecond =
+          totalBytes / (steps * stepDuration.inMilliseconds / 1000);
 
       yield TransferProgress(
         bytesTransferred: bytesTransferred,
@@ -297,7 +426,8 @@ class QueuedTransferProvider {
 }
 
 /// Extension to easily create queued providers.
-extension QueuedTransferProviderExtension on TransferQueueManager<WidgetDownloadTask> {
+extension QueuedTransferProviderExtension
+    on TransferQueueManager<WidgetDownloadTask> {
   /// Creates a download stream for a widget.
   Stream<TransferProgress> downloadForWidget(
     String url, {
