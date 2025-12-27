@@ -218,6 +218,162 @@ ImageMessageTransferWidget(
 )
 ```
 
+## Queue Management (Concurrent Transfers)
+
+Control concurrent transfer operations with configurable limits:
+
+### Basic Queue Usage
+
+```dart
+// Create a download queue with max 3 concurrent downloads
+final downloadQueue = DownloadQueueManager(maxConcurrent: 3);
+
+// Add downloads - only 3 will run at a time, rest will queue
+downloadQueue.addUrl('https://example.com/file1.pdf');
+downloadQueue.addUrl('https://example.com/file2.pdf');
+downloadQueue.addUrl('https://example.com/file3.pdf');
+downloadQueue.addUrl('https://example.com/file4.pdf'); // Will queue
+downloadQueue.addUrl('https://example.com/file5.pdf'); // Will queue
+
+// Listen to queue state
+downloadQueue.stateStream.listen((state) {
+  print('Running: ${state.runningCount}/${state.maxConcurrent}');
+  print('Pending: ${state.pendingCount}');
+  print('Overall Progress: ${(state.overallProgress * 100).toStringAsFixed(1)}%');
+});
+
+// Wait for all downloads to complete
+final results = await downloadQueue.waitForAll();
+```
+
+### Priority Queue
+
+```dart
+// Add with priority - higher priority downloads start first
+downloadQueue.addUrl(
+  'https://example.com/urgent.pdf',
+  priority: TransferPriority.urgent,
+);
+downloadQueue.addUrl(
+  'https://example.com/normal.pdf',
+  priority: TransferPriority.normal,
+);
+downloadQueue.addUrl(
+  'https://example.com/low.pdf',
+  priority: TransferPriority.low,
+);
+
+// Move existing download to front of queue
+downloadQueue.moveToFront(downloadId);
+
+// Change priority of queued download
+downloadQueue.changePriority(downloadId, TransferPriority.high);
+```
+
+### Queue Control
+
+```dart
+// Pause the queue (running transfers continue, no new ones start)
+downloadQueue.pause();
+
+// Resume the queue
+downloadQueue.start();
+
+// Cancel a specific download
+downloadQueue.cancel(downloadId);
+
+// Cancel all downloads
+downloadQueue.cancelAll();
+
+// Retry a failed download
+downloadQueue.retry(downloadId);
+
+// Dynamically change max concurrent
+downloadQueue.maxConcurrent = 5;
+```
+
+### Upload Queue
+
+```dart
+// Upload queue works similarly
+final uploadQueue = UploadQueueManager(maxConcurrent: 2);
+
+// Add files to upload
+uploadQueue.addFile(
+  'https://api.example.com/upload',
+  '/path/to/file.pdf',
+);
+
+// Add multiple files
+for (final file in filesToUpload) {
+  uploadQueue.addFile(uploadUrl, file.path);
+}
+```
+
+### Generic Queue Manager
+
+For custom transfer logic, use `TransferQueueManager`:
+
+```dart
+// Create a generic queue
+final queue = TransferQueueManager<MyTask>(
+  maxConcurrent: 3,
+  autoRetry: true,
+  maxRetries: 3,
+  executor: (transfer) async* {
+    // Your custom transfer logic
+    final task = transfer.task;
+
+    for (int i = 0; i <= 100; i += 10) {
+      if (transfer.cancellationToken.isCancelled) {
+        yield TransferProgress(status: TransferStatus.cancelled);
+        return;
+      }
+
+      await Future.delayed(Duration(milliseconds: 100));
+      yield TransferProgress(
+        bytesTransferred: i,
+        totalBytes: 100,
+        status: TransferStatus.running,
+      );
+    }
+
+    yield TransferProgress.completed(totalBytes: 100);
+  },
+);
+
+// Add tasks
+final queuedTransfer = queue.add(myTask);
+
+// Listen to individual transfer progress
+queuedTransfer.progressStream.listen((progress) {
+  print('Progress: ${progress.progressPercent}%');
+});
+
+// Wait for this specific transfer
+final result = await queuedTransfer.future;
+```
+
+### Queue State
+
+```dart
+// Get current state
+final state = downloadQueue.state;
+print('Running: ${state.runningCount}');
+print('Pending: ${state.pendingCount}');
+print('Is Full: ${state.isFull}');
+print('Available Slots: ${state.availableSlots}');
+
+// Access individual transfers
+for (final transfer in state.runningTransfers) {
+  print('${transfer.id}: ${(transfer.progress * 100).toStringAsFixed(1)}%');
+}
+
+for (final transfer in state.pendingTransfers) {
+  print('${transfer.id} at position ${transfer.queuePosition}');
+}
+```
+
 ## Theming & Skins
 
 The `SocialTransferThemeData` class extends `ThemeExtension`, integrating seamlessly with Flutter's theme system.

@@ -2,6 +2,7 @@ import 'package:file_system_management/file_system_management.dart';
 import 'package:flutter/material.dart';
 
 import 'screens/chat_demo_screen.dart';
+import 'screens/queue_demo_screen.dart';
 import 'screens/settings_screen.dart';
 
 void main() async {
@@ -127,6 +128,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final screens = [
       ChatDemoScreen(currentSkin: widget.currentSkin),
+      const QueueDemoScreen(),
       SettingsScreen(
         currentSkin: widget.currentSkin,
         themeMode: widget.themeMode,
@@ -149,6 +151,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat),
             label: 'المحادثات',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.queue_outlined),
+            selectedIcon: Icon(Icons.queue),
+            label: 'الطابور',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

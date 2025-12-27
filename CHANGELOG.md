@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-12-27
+
+### Added
+
+#### Queue Management System
+- `TransferQueueManager<T>` - Generic queue manager with configurable concurrency
+  - Priority-based queue (urgent, high, normal, low)
+  - Configurable `maxConcurrent` transfers
+  - Auto-retry support with configurable `maxRetries`
+  - Pause/resume queue operations
+  - Cancel individual or all transfers
+  - Change priority of queued transfers
+  - Move transfers to front of queue
+  - Stream-based state updates
+  - Overall progress tracking
+- `DownloadQueueManager` - Specialized download queue
+  - Integration with `FileSystemController`
+  - Add by URL or `DownloadTask`
+  - Add multiple URLs at once
+  - Progress tracking per download
+  - Pause/resume individual downloads
+  - Wait for specific or all downloads
+- `UploadQueueManager` - Specialized upload queue
+  - Similar API to `DownloadQueueManager`
+  - Add files by path or `UploadTask`
+- `QueuedTransfer<T>` - Individual transfer wrapper
+  - Progress stream
+  - Future completion
+  - Cancellation token
+  - Queue position tracking
+  - Metadata support
+- `TransferPriority` enum - Priority levels for queue ordering
+- `QueuedTransferStatus` enum - Status tracking for queued transfers
+- `TransferQueueState<T>` - Queue state snapshot with statistics
+- `TransferQueueResult<T>` - Result wrapper for completed transfers
+
 ## [0.2.0] - 2025-12-26
 
 ### Added

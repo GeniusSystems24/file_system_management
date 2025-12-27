@@ -62,6 +62,8 @@ export 'src/core/extensions/file_path_extension.dart';
 export 'src/core/extensions/string_extension.dart';
 export 'src/core/file_cache_manager.dart';
 export 'src/core/task_mutex.dart';
+export 'src/core/transfer_queue_manager.dart';
+export 'src/core/download_queue_manager.dart';
 
 // Controllers
 export 'src/controllers/file_system_controller.dart';
