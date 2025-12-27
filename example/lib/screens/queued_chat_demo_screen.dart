@@ -1,17 +1,22 @@
 import 'dart:io';
+import 'dart:math';
 
+import 'package:chewie/chewie.dart';
 import 'package:file_system_management/file_system_management.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:video_player/video_player.dart';
 
 import '../providers/real_download_provider.dart';
 
 /// Demo screen showing how to use the queue manager with real downloads.
 ///
 /// This demonstrates:
+/// - WhatsApp-like chat design
 /// - Real file downloads with caching
-/// - Controlling concurrent downloads across multiple widgets
-/// - Displaying downloaded images
-/// - Queue state visualization
+/// - Video and audio playback
+/// - Queue management
 class QueuedChatDemoScreen extends StatefulWidget {
   const QueuedChatDemoScreen({super.key});
 
@@ -23,8 +28,7 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
   late RealDownloadProvider _provider;
   int _maxConcurrent = 2;
 
-  // Real sample files
-  final List<_RealMessage> _messages = [];
+  final List<_ChatMessage> _messages = [];
 
   @override
   void initState() {
@@ -35,88 +39,122 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
 
   void _generateMessages() {
     _messages.addAll([
-      // Firebase Storage Images (from user)
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F127.jpg?alt=media&token=66ae3024-0f25-45d7-8796-84852ee02cd6',
+      // Firebase Storage Images
+      _ChatMessage(
+        type: MessageType.image,
+        url:
+            'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F127.jpg?alt=media&token=66ae3024-0f25-45d7-8796-84852ee02cd6',
         fileName: 'منتج_127.jpg',
         isOutgoing: false,
+        fileSize: 150 * 1024,
+        time: '10:30 ص',
       ),
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F131.jpg?alt=media&token=82580148-4fe5-4f0c-9c58-b069119dbca6',
+      _ChatMessage(
+        type: MessageType.image,
+        url:
+            'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F131.jpg?alt=media&token=82580148-4fe5-4f0c-9c58-b069119dbca6',
         fileName: 'منتج_131.jpg',
         isOutgoing: true,
-      ),
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F71.jpg?alt=media&token=d50f640d-9b18-4f38-a711-d8b0aa726423',
-        fileName: 'منتج_71.jpg',
-        isOutgoing: false,
-      ),
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F82.jpg?alt=media&token=2f152d4c-c601-4437-806d-c9e2a85d14bc',
-        fileName: 'منتج_82.jpg',
-        isOutgoing: true,
-      ),
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F67.jpg?alt=media&token=26880404-9820-4159-b730-7282cbc5d943',
-        fileName: 'منتج_67.jpg',
-        isOutgoing: false,
-      ),
-
-      // Sample PDF document
-      const _RealMessage(
-        type: _MessageType.document,
-        url: 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
-        fileName: 'sample_document.pdf',
-        fileSize: 50 * 1024,
-        isOutgoing: true,
-      ),
-
-      // Sample video (small)
-      const _RealMessage(
-        type: _MessageType.video,
-        url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
-        fileName: 'sample_video.mp4',
-        fileSize: 1 * 1024 * 1024,
-        duration: Duration(seconds: 5),
-        isOutgoing: false,
+        fileSize: 200 * 1024,
+        time: '10:32 ص',
       ),
 
       // Sample audio
-      const _RealMessage(
-        type: _MessageType.audio,
+      _ChatMessage(
+        type: MessageType.audio,
         url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-        fileName: 'sample_audio.mp3',
+        fileName: 'رسالة_صوتية.mp3',
         fileSize: 5 * 1024 * 1024,
-        duration: Duration(minutes: 6, seconds: 13),
+        duration: const Duration(minutes: 6, seconds: 13),
         isOutgoing: true,
-      ),
-
-      // Sample ZIP file
-      const _RealMessage(
-        type: _MessageType.file,
-        url: 'https://github.com/nicehorse06/flappy-bird-pygame/archive/refs/heads/master.zip',
-        fileName: 'sample_project.zip',
-        fileSize: 100 * 1024,
-        isOutgoing: false,
+        time: '10:35 ص',
       ),
 
       // More images
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://picsum.photos/800/600',
-        fileName: 'random_image_1.jpg',
-        isOutgoing: true,
-      ),
-      const _RealMessage(
-        type: _MessageType.image,
-        url: 'https://picsum.photos/600/800',
-        fileName: 'random_image_2.jpg',
+      _ChatMessage(
+        type: MessageType.image,
+        url:
+            'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F71.jpg?alt=media&token=d50f640d-9b18-4f38-a711-d8b0aa726423',
+        fileName: 'منتج_71.jpg',
         isOutgoing: false,
+        fileSize: 180 * 1024,
+        time: '10:40 ص',
+      ),
+
+      // Sample video
+      _ChatMessage(
+        type: MessageType.video,
+        url:
+            'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4',
+        fileName: 'فيديو_مضحك.mp4',
+        fileSize: 1 * 1024 * 1024,
+        duration: const Duration(seconds: 5),
+        isOutgoing: false,
+        time: '10:45 ص',
+      ),
+
+      // PDF document
+      _ChatMessage(
+        type: MessageType.document,
+        url: 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
+        fileName: 'التقرير_السنوي.pdf',
+        fileSize: 50 * 1024,
+        isOutgoing: true,
+        time: '10:50 ص',
+      ),
+
+      // More images
+      _ChatMessage(
+        type: MessageType.image,
+        url:
+            'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F82.jpg?alt=media&token=2f152d4c-c601-4437-806d-c9e2a85d14bc',
+        fileName: 'منتج_82.jpg',
+        isOutgoing: true,
+        fileSize: 160 * 1024,
+        time: '10:55 ص',
+      ),
+
+      // ZIP file
+      _ChatMessage(
+        type: MessageType.file,
+        url:
+            'https://github.com/nicehorse06/flappy-bird-pygame/archive/refs/heads/master.zip',
+        fileName: 'مشروع_برمجي.zip',
+        fileSize: 100 * 1024,
+        isOutgoing: false,
+        time: '11:00 ص',
+      ),
+
+      // Another audio
+      _ChatMessage(
+        type: MessageType.audio,
+        url:
+            'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+        fileName: 'مقطع_موسيقي.mp3',
+        fileSize: 4 * 1024 * 1024,
+        duration: const Duration(minutes: 5, seconds: 25),
+        isOutgoing: false,
+        time: '11:05 ص',
+      ),
+
+      // Random images from Picsum
+      _ChatMessage(
+        type: MessageType.image,
+        url: 'https://picsum.photos/800/600',
+        fileName: 'صورة_عشوائية.jpg',
+        fileSize: 300 * 1024,
+        isOutgoing: true,
+        time: '11:10 ص',
+      ),
+
+      _ChatMessage(
+        type: MessageType.image,
+        url:
+            'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/primary_sys%2F%D8%A7%D9%84%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%2F67.jpg?alt=media&token=26880404-9820-4159-b730-7282cbc5d943',
+        fileName: 'منتج_67.jpg',
+        isOutgoing: false,
+        fileSize: 140 * 1024,
+        time: '11:15 ص',
       ),
     ]);
   }
@@ -130,37 +168,8 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تنزيل ملفات حقيقية'),
-        actions: [
-          IconButton(
-            icon: Icon(_provider.isPaused ? Icons.play_arrow : Icons.pause),
-            onPressed: () {
-              setState(() {
-                if (_provider.isPaused) {
-                  _provider.start();
-                } else {
-                  _provider.pause();
-                }
-              });
-            },
-            tooltip: _provider.isPaused ? 'استمرار' : 'إيقاف',
-          ),
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: _downloadAll,
-            tooltip: 'تنزيل الكل',
-          ),
-          IconButton(
-            icon: const Icon(Icons.cancel),
-            onPressed: () {
-              _provider.cancelAll();
-              setState(() {});
-            },
-            tooltip: 'إلغاء الكل',
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFECE5DD),
+      appBar: _buildAppBar(),
       body: Column(
         children: [
           // Queue status bar
@@ -169,21 +178,99 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
           // Concurrent control
           _buildConcurrentSlider(),
 
-          const Divider(height: 1),
-
-          // Messages list
+          // Chat messages
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageWidget(message, index);
-              },
+            child: DecoratedBox(
+              // WhatsApp-like chat background
+              decoration: const BoxDecoration(
+                color: Color(0xFFECE5DD),
+              ),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 16,
+                ),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) => _buildMessage(
+                  _messages[index],
+                  index,
+                ),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: const Color(0xFF075E54),
+      foregroundColor: Colors.white,
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: Colors.grey[300],
+            child: const Icon(Icons.group, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'مجموعة التنزيلات',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'أنت و 10 مشاركين آخرين',
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(_provider.isPaused ? Icons.play_arrow : Icons.pause),
+          onPressed: () {
+            setState(() {
+              if (_provider.isPaused) {
+                _provider.start();
+              } else {
+                _provider.pause();
+              }
+            });
+          },
+          tooltip: _provider.isPaused ? 'استمرار' : 'إيقاف مؤقت',
+        ),
+        IconButton(
+          icon: const Icon(Icons.download),
+          onPressed: _downloadAll,
+          tooltip: 'تنزيل الكل',
+        ),
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'cancel_all') {
+              _provider.cancelAll();
+              setState(() {});
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'cancel_all',
+              child: Row(
+                children: [
+                  Icon(Icons.cancel, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('إلغاء الكل'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -194,33 +281,43 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
         final state = snapshot.data ?? _provider.state;
 
         return Container(
-          padding: const EdgeInsets.all(12),
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: const Color(0xFF075E54).withValues(alpha: 0.1),
           child: Row(
             children: [
-              _buildStatusChip(
+              _buildStatusBadge(
                 'جاري',
-                state.runningCount.toString(),
-                Colors.blue,
+                state.runningCount,
+                const Color(0xFF25D366),
               ),
               const SizedBox(width: 8),
-              _buildStatusChip(
-                'في الانتظار',
-                state.pendingCount.toString(),
+              _buildStatusBadge(
+                'انتظار',
+                state.pendingCount,
                 Colors.orange,
               ),
               const Spacer(),
               if (state.totalCount > 0) ...[
                 Text(
                   '${(state.overallProgress * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF075E54),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  width: 100,
-                  child: LinearProgressIndicator(
-                    value: state.overallProgress,
-                    backgroundColor: Colors.grey[300],
+                  width: 80,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: state.overallProgress,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: const AlwaysStoppedAnimation(
+                        Color(0xFF25D366),
+                      ),
+                      minHeight: 6,
+                    ),
                   ),
                 ),
               ],
@@ -231,29 +328,32 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
     );
   }
 
-  Widget _buildStatusChip(String label, String value, Color color) {
+  Widget _buildStatusBadge(String label, int count, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            value,
-            style: TextStyle(
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
               color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+              shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Text(
-            label,
-            style: TextStyle(color: color, fontSize: 12),
+            '$count $label',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -261,32 +361,52 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
   }
 
   Widget _buildConcurrentSlider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      color: Colors.white,
       child: Row(
         children: [
-          const Text('الحد الأقصى:'),
+          const Icon(Icons.speed, size: 20, color: Color(0xFF075E54)),
+          const SizedBox(width: 8),
+          const Text('السرعة:', style: TextStyle(fontSize: 13)),
           Expanded(
-            child: Slider(
-              value: _maxConcurrent.toDouble(),
-              min: 1,
-              max: 5,
-              divisions: 4,
-              label: '$_maxConcurrent',
-              onChanged: (value) {
-                setState(() {
-                  _maxConcurrent = value.round();
-                  _provider.maxConcurrent = _maxConcurrent;
-                });
-              },
+            child: SliderTheme(
+              data: SliderThemeData(
+                activeTrackColor: const Color(0xFF25D366),
+                inactiveTrackColor: Colors.grey[300],
+                thumbColor: const Color(0xFF075E54),
+                overlayColor: const Color(0xFF25D366).withValues(alpha: 0.2),
+              ),
+              child: Slider(
+                value: _maxConcurrent.toDouble(),
+                min: 1,
+                max: 5,
+                divisions: 4,
+                label: '$_maxConcurrent',
+                onChanged: (value) {
+                  setState(() {
+                    _maxConcurrent = value.round();
+                    _provider.maxConcurrent = _maxConcurrent;
+                  });
+                },
+              ),
             ),
           ),
           Container(
-            width: 32,
+            width: 28,
+            height: 28,
             alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFF075E54),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Text(
               '$_maxConcurrent',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -294,115 +414,19 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
     );
   }
 
-  Widget _buildMessageWidget(_RealMessage message, int index) {
+  Widget _buildMessage(_ChatMessage message, int index) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: message.isOutgoing
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          _RealMessageCard(
-            message: message,
-            provider: _provider,
-            onDownload: () {
-              _provider.enqueueDownload(
-                url: message.url,
-                fileName: message.fileName,
-                expectedSize: message.fileSize,
-              );
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 4),
-          _buildQueueInfo(message.url),
-        ],
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Align(
+        alignment:
+            message.isOutgoing
+                ? AlignmentDirectional.centerEnd
+                : AlignmentDirectional.centerStart,
+        child: _ChatBubble(
+          message: message,
+          provider: _provider,
+        ),
       ),
-    );
-  }
-
-  Widget _buildQueueInfo(String url) {
-    return StreamBuilder<TransferQueueState<RealDownloadTask>>(
-      stream: _provider.stateStream,
-      builder: (context, snapshot) {
-        final position = _provider.getQueuePosition(url);
-        final isDownloading = _provider.isDownloading(url);
-        final isQueued = _provider.isQueued(url);
-        final completedPath = _provider.getCompletedPath(url);
-
-        if (completedPath != null) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle, size: 14, color: Colors.green),
-                    SizedBox(width: 4),
-                    Text(
-                      'تم التنزيل',
-                      style: TextStyle(color: Colors.green, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-
-        if (!isDownloading && !isQueued) {
-          return const SizedBox.shrink();
-        }
-
-        String text;
-        Color color;
-
-        if (isDownloading) {
-          text = 'جاري التنزيل...';
-          color = Colors.blue;
-        } else {
-          text = 'في الطابور (الترتيب: $position)';
-          color = Colors.orange;
-        }
-
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                text,
-                style: TextStyle(color: color, fontSize: 11),
-              ),
-            ),
-            if (isQueued) ...[
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: () => _provider.moveToFront(url),
-                child: const Icon(Icons.arrow_upward, size: 16),
-              ),
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: () {
-                  _provider.cancel(url);
-                  setState(() {});
-                },
-                child: const Icon(Icons.close, size: 16),
-              ),
-            ],
-          ],
-        );
-      },
     );
   }
 
@@ -418,27 +442,33 @@ class _QueuedChatDemoScreenState extends State<QueuedChatDemoScreen> {
   }
 }
 
-/// Card widget for displaying real message with download functionality.
-class _RealMessageCard extends StatefulWidget {
-  final _RealMessage message;
+/// Chat bubble widget with WhatsApp-like design.
+class _ChatBubble extends StatefulWidget {
+  final _ChatMessage message;
   final RealDownloadProvider provider;
-  final VoidCallback onDownload;
 
-  const _RealMessageCard({
+  const _ChatBubble({
     required this.message,
     required this.provider,
-    required this.onDownload,
   });
 
   @override
-  State<_RealMessageCard> createState() => _RealMessageCardState();
+  State<_ChatBubble> createState() => _ChatBubbleState();
 }
 
-class _RealMessageCardState extends State<_RealMessageCard> {
+class _ChatBubbleState extends State<_ChatBubble> {
   String? _cachedPath;
-  bool _isLoading = true;
-  double _progress = 0;
   bool _isDownloading = false;
+  double _progress = 0;
+  String? _error;
+
+  // Media players
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  AudioPlayer? _audioPlayer;
+  bool _isPlaying = false;
+  Duration _audioPosition = Duration.zero;
+  Duration _audioDuration = Duration.zero;
 
   @override
   void initState() {
@@ -446,18 +476,72 @@ class _RealMessageCardState extends State<_RealMessageCard> {
     _checkCache();
   }
 
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    _chewieController?.dispose();
+    _audioPlayer?.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkCache() async {
-    final path = await widget.provider.getCachedPath(widget.message.url);
-    if (mounted) {
-      setState(() {
-        _cachedPath = path;
-        _isLoading = false;
+    final path = widget.provider.getCachedPath(widget.message.url);
+    if (path != null && mounted) {
+      setState(() => _cachedPath = path);
+      _initializePlayer(path);
+    }
+  }
+
+  Future<void> _initializePlayer(String path) async {
+    if (widget.message.type == MessageType.video) {
+      _videoController = VideoPlayerController.file(File(path));
+      await _videoController!.initialize();
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: false,
+        looping: false,
+        aspectRatio: _videoController!.value.aspectRatio,
+        showControls: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: const Color(0xFF25D366),
+          handleColor: const Color(0xFF075E54),
+          bufferedColor: Colors.grey[300]!,
+          backgroundColor: Colors.grey[200]!,
+        ),
+      );
+      if (mounted) setState(() {});
+    } else if (widget.message.type == MessageType.audio) {
+      _audioPlayer = AudioPlayer();
+      await _audioPlayer!.setFilePath(path);
+      _audioDuration = _audioPlayer!.duration ?? Duration.zero;
+
+      _audioPlayer!.positionStream.listen((position) {
+        if (mounted) setState(() => _audioPosition = position);
       });
+
+      _audioPlayer!.playerStateStream.listen((state) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = state.playing;
+            if (state.processingState == ProcessingState.completed) {
+              _isPlaying = false;
+              _audioPosition = Duration.zero;
+              _audioPlayer?.seek(Duration.zero);
+              _audioPlayer?.pause();
+            }
+          });
+        }
+      });
+
+      if (mounted) setState(() {});
     }
   }
 
   void _startDownload() {
-    setState(() => _isDownloading = true);
+    setState(() {
+      _isDownloading = true;
+      _error = null;
+    });
 
     widget.provider
         .enqueueDownload(
@@ -473,212 +557,527 @@ class _RealMessageCardState extends State<_RealMessageCard> {
           },
           onDone: () {
             if (mounted) {
+              final path =
+                  widget.provider.getCompletedPath(widget.message.url);
               setState(() {
                 _isDownloading = false;
-                _cachedPath = widget.provider.getCompletedPath(widget.message.url);
+                _cachedPath = path;
               });
+              if (path != null) {
+                _initializePlayer(path);
+              }
             }
           },
           onError: (e) {
             if (mounted) {
-              setState(() => _isDownloading = false);
+              setState(() {
+                _isDownloading = false;
+                _error = e.toString();
+              });
             }
           },
         );
   }
 
+  void _toggleAudioPlayback() async {
+    if (_audioPlayer == null) return;
+
+    if (_isPlaying) {
+      await _audioPlayer!.pause();
+    } else {
+      await _audioPlayer!.play();
+    }
+  }
+
+  Future<void> _openFile(String path) async {
+    await OpenFilex.open(path);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final message = widget.message;
-    final isOutgoing = message.isOutgoing;
+    final isOutgoing = widget.message.isOutgoing;
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 280),
+      constraints: const BoxConstraints(maxWidth: 300),
       decoration: BoxDecoration(
-        color: isOutgoing
-            ? Theme.of(context).colorScheme.primaryContainer
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        color: isOutgoing ? const Color(0xFFDCF8C6) : Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(12),
+          topRight: const Radius.circular(12),
+          bottomLeft: Radius.circular(isOutgoing ? 12 : 0),
+          bottomRight: Radius.circular(isOutgoing ? 0 : 12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Content based on type
-          if (message.type == _MessageType.image)
-            _buildImageContent()
-          else
-            _buildFileContent(),
-
-          // File name
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  message.fileName,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (message.fileSize != null)
-                  Text(
-                    _formatBytes(message.fileSize!),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
-          ),
+          _buildContent(),
+          _buildFooter(),
         ],
       ),
     );
   }
 
-  Widget _buildImageContent() {
-    if (_isLoading) {
-      return Container(
-        height: 180,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: const Center(child: CircularProgressIndicator()),
-      );
+  Widget _buildContent() {
+    switch (widget.message.type) {
+      case MessageType.image:
+        return _buildImageContent();
+      case MessageType.video:
+        return _buildVideoContent();
+      case MessageType.audio:
+        return _buildAudioContent();
+      case MessageType.document:
+      case MessageType.file:
+        return _buildFileContent();
     }
+  }
 
+  Widget _buildImageContent() {
     if (_cachedPath != null) {
-      return ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        child: Image.file(
-          File(_cachedPath!),
-          height: 180,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stack) => Container(
-            height: 180,
-            color: Colors.grey[300],
-            child: const Center(
-              child: Icon(Icons.broken_image, size: 48),
-            ),
+      return GestureDetector(
+        onTap: () => _showFullScreenImage(_cachedPath!),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          child: Image.file(
+            File(_cachedPath!),
+            width: 280,
+            height: 200,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildPlaceholder(Icons.broken_image),
           ),
         ),
       );
     }
 
-    return Container(
-      height: 180,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Icon(Icons.image, size: 48, color: Colors.grey),
-          if (_isDownloading)
-            CircularProgressIndicator(value: _progress > 0 ? _progress : null)
-          else
-            IconButton.filled(
-              onPressed: _startDownload,
-              icon: const Icon(Icons.download),
+    return _buildDownloadableMedia(Icons.image, 200);
+  }
+
+  Widget _buildVideoContent() {
+    if (_cachedPath != null && _chewieController != null) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        child: SizedBox(
+          width: 280,
+          height: 200,
+          child: Chewie(controller: _chewieController!),
+        ),
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        _buildDownloadableMedia(Icons.videocam, 200),
+        if (widget.message.duration != null && !_isDownloading)
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                _formatDuration(widget.message.duration!),
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+              ),
             ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAudioContent() {
+    if (_cachedPath != null && _audioPlayer != null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            // Play/Pause button
+            GestureDetector(
+              onTap: _toggleAudioPlayback,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF25D366),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Waveform / Progress
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Waveform visualization
+                  SizedBox(
+                    height: 32,
+                    child: CustomPaint(
+                      painter: _WaveformPainter(
+                        progress: _audioDuration.inMilliseconds > 0
+                            ? _audioPosition.inMilliseconds /
+                                _audioDuration.inMilliseconds
+                            : 0,
+                        isPlaying: _isPlaying,
+                      ),
+                      size: const Size(double.infinity, 32),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Duration
+                  Text(
+                    '${_formatDuration(_audioPosition)} / ${_formatDuration(_audioDuration)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Not downloaded yet
+    return Container(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          // Download button
+          GestureDetector(
+            onTap: _isDownloading ? null : _startDownload,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _isDownloading
+                    ? Colors.grey[300]
+                    : const Color(0xFF25D366),
+                shape: BoxShape.circle,
+              ),
+              child: _isDownloading
+                  ? Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          value: _progress > 0 ? _progress : null,
+                          strokeWidth: 2,
+                          valueColor: const AlwaysStoppedAnimation(
+                            Color(0xFF075E54),
+                          ),
+                        ),
+                        Text(
+                          '${(_progress * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const Icon(Icons.download, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Waveform placeholder
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 32,
+                  child: CustomPaint(
+                    painter: _WaveformPainter(progress: 0, isPlaying: false),
+                    size: const Size(double.infinity, 32),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.message.duration != null
+                      ? _formatDuration(widget.message.duration!)
+                      : _formatBytes(widget.message.fileSize ?? 0),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildFileContent() {
-    final message = widget.message;
-    IconData icon;
-    Color color;
-
-    switch (message.type) {
-      case _MessageType.video:
-        icon = Icons.videocam;
-        color = Colors.red;
-      case _MessageType.audio:
-        icon = Icons.audiotrack;
-        color = Colors.purple;
-      case _MessageType.document:
-        icon = Icons.description;
-        color = Colors.blue;
-      case _MessageType.file:
-        icon = Icons.insert_drive_file;
-        color = Colors.orange;
-      default:
-        icon = Icons.insert_drive_file;
-        color = Colors.grey;
-    }
+    final isDocument = widget.message.type == MessageType.document;
+    final iconData = isDocument ? Icons.description : Icons.insert_drive_file;
+    final color = isDocument ? Colors.red : Colors.orange;
+    final ext = widget.message.fileName.split('.').last.toUpperCase();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
+          // File icon
           Container(
-            width: 56,
-            height: 56,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Icon(icon, color: color, size: 32),
+                Icon(iconData, color: color, size: 28),
                 if (_isDownloading)
                   SizedBox(
-                    width: 48,
-                    height: 48,
+                    width: 40,
+                    height: 40,
                     child: CircularProgressIndicator(
                       value: _progress > 0 ? _progress : null,
-                      strokeWidth: 3,
+                      strokeWidth: 2,
                     ),
                   ),
               ],
             ),
           ),
           const SizedBox(width: 12),
+
+          // File info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  message.type.name.toUpperCase(),
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  widget.message.fileName,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                if (message.duration != null)
-                  Text(
-                    _formatDuration(message.duration!),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        ext,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatBytes(widget.message.fileSize ?? 0),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          if (!_isDownloading && _cachedPath == null)
+
+          // Action button
+          if (_cachedPath != null)
             IconButton(
-              onPressed: _startDownload,
-              icon: const Icon(Icons.download),
+              icon: const Icon(Icons.open_in_new, color: Color(0xFF075E54)),
+              onPressed: () => _openFile(_cachedPath!),
             )
-          else if (_cachedPath != null)
-            const Icon(Icons.check_circle, color: Colors.green),
+          else if (!_isDownloading)
+            IconButton(
+              icon: const Icon(Icons.download, color: Color(0xFF25D366)),
+              onPressed: _startDownload,
+            )
+          else
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
         ],
       ),
     );
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(1)} GB';
+  Widget _buildDownloadableMedia(IconData icon, double height) {
+    return Container(
+      width: 280,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(icon, size: 48, color: Colors.grey[500]),
+          if (_isDownloading)
+            SizedBox(
+              width: 64,
+              height: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: _progress > 0 ? _progress : null,
+                    strokeWidth: 3,
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF25D366)),
+                  ),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: Colors.white70,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${(_progress * 100).toInt()}%',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: _startDownload,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF25D366),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.download,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+          if (_error != null)
+            Positioned(
+              bottom: 8,
+              child: GestureDetector(
+                onTap: _startDownload,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, color: Colors.white, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        'إعادة المحاولة',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder(IconData icon) {
+    return Container(
+      width: 280,
+      height: 200,
+      color: Colors.grey[300],
+      child: Icon(icon, size: 48, color: Colors.grey[500]),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.message.time,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
+          ),
+          if (widget.message.isOutgoing) ...[
+            const SizedBox(width: 4),
+            Icon(
+              _cachedPath != null ? Icons.done_all : Icons.done,
+              size: 16,
+              color: _cachedPath != null ? const Color(0xFF34B7F1) : Colors.grey,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showFullScreenImage(String path) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              child: Image.file(File(path)),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   String _formatDuration(Duration duration) {
@@ -686,24 +1085,77 @@ class _RealMessageCardState extends State<_RealMessageCard> {
     final seconds = duration.inSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+  }
 }
 
-enum _MessageType { image, video, audio, document, file }
+/// Waveform painter for audio visualization.
+class _WaveformPainter extends CustomPainter {
+  final double progress;
+  final bool isPlaying;
+  final Random _random = Random(42);
 
-class _RealMessage {
-  final _MessageType type;
+  _WaveformPainter({
+    required this.progress,
+    required this.isPlaying,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final barCount = 40;
+    final barWidth = size.width / barCount - 1;
+    final maxHeight = size.height;
+
+    for (int i = 0; i < barCount; i++) {
+      final x = i * (barWidth + 1);
+      final heightFactor = 0.3 + 0.7 * _random.nextDouble();
+      final barHeight = maxHeight * heightFactor;
+
+      final isPlayed = i / barCount < progress;
+
+      final paint = Paint()
+        ..color = isPlayed
+            ? const Color(0xFF25D366)
+            : Colors.grey[400]!
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = barWidth;
+
+      canvas.drawLine(
+        Offset(x + barWidth / 2, (maxHeight - barHeight) / 2),
+        Offset(x + barWidth / 2, (maxHeight + barHeight) / 2),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WaveformPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.isPlaying != isPlaying;
+  }
+}
+
+enum MessageType { image, video, audio, document, file }
+
+class _ChatMessage {
+  final MessageType type;
   final String url;
   final String fileName;
   final int? fileSize;
   final Duration? duration;
   final bool isOutgoing;
+  final String time;
 
-  const _RealMessage({
+  const _ChatMessage({
     required this.type,
     required this.url,
     required this.fileName,
     this.fileSize,
     this.duration,
     required this.isOutgoing,
+    required this.time,
   });
 }

@@ -12,6 +12,13 @@ dependencies:
   file_system_management:
     path: ../
   collection: ^1.19.1
+  # Video player
+  video_player: ^2.9.2
+  chewie: ^1.9.0
+  # Audio player
+  just_audio: ^0.9.42
+  # Open files
+  open_filex: ^4.6.0
 
 dev_dependencies:
   flutter_test:
