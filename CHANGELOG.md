@@ -15,6 +15,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Clean Architecture Restructuring
+- **Domain Layer** - Pure business logic without external dependencies
+  - `TransferEntity` - Core transfer business entity
+  - `TransferConfigEntity` - Transfer configuration entity
+  - `TransferRepository` - Abstract repository interface
+  - `StorageRepository` - Storage operations interface
+  - `CacheRepository` - Cache operations interface
+  - `PermissionRepository` - Permission handling interface
+  - `Result<T>` - Functional error handling with `Success`/`Fail`
+  - Sealed `Failure` classes: `NetworkFailure`, `StorageFailure`, `CancelledFailure`, etc.
+  - Use cases: `EnqueueDownloadUseCase`, `EnqueueParallelDownloadUseCase`, `EnqueueUploadUseCase`, `PauseTransferUseCase`, `ResumeTransferUseCase`, `CancelTransferUseCase`, `GetTransferUseCase`, `GetAllTransfersUseCase`, `CheckAvailableSpaceUseCase`
+
+- **Data Layer** - Repository implementations
+  - `DownloaderDataSource` - Wrapper for background_downloader
+  - `TransferRepositoryImpl` - Full repository implementation
+  - `TransferModel` - Data transfer object with mapping
+
+- **Infrastructure Layer** - Cross-cutting concerns
+  - `FileCacheManager` - LRU cache with stale entry cleanup
+  - `AppDirectory` - Application directory management
+
+- **Presentation Layer** - UI components
+  - `TransferController` - Facade controller with clean API
+  - Maintains existing widgets and themes
+
+- **Core Module** - Shared utilities
+  - Extensions, mutex, queue managers
+
 #### New background_downloader Features
 - **Parallel Downloads** - `createParallelDownloadTask()` for faster large file downloads
   - Split files into multiple chunks for simultaneous download

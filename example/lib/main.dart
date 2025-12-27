@@ -2,6 +2,7 @@ import 'package:file_system_management/file_system_management.dart';
 import 'package:flutter/material.dart';
 
 import 'screens/chat_demo_screen.dart';
+import 'screens/clean_arch_demo_screen.dart';
 import 'screens/queue_demo_screen.dart';
 import 'screens/queued_chat_demo_screen.dart';
 import 'screens/settings_screen.dart';
@@ -130,6 +131,7 @@ class _MainScreenState extends State<MainScreen> {
     final screens = [
       ChatDemoScreen(currentSkin: widget.currentSkin),
       const QueuedChatDemoScreen(),
+      const CleanArchDemoScreen(),
       const QueueDemoScreen(),
       SettingsScreen(
         currentSkin: widget.currentSkin,
@@ -158,6 +160,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.download_outlined),
             selectedIcon: Icon(Icons.download),
             label: 'الطابور+ويدجت',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.architecture_outlined),
+            selectedIcon: Icon(Icons.architecture),
+            label: 'Clean Arch',
           ),
           NavigationDestination(
             icon: Icon(Icons.queue_outlined),
