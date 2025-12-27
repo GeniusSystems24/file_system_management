@@ -3,20 +3,25 @@
 [![pub package](https://img.shields.io/pub/v/file_system_management.svg)](https://pub.dev/packages/file_system_management)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive Flutter package for managing file transfers with progress tracking, queue management, social media-inspired UI widgets, and injectable handlers.
+A comprehensive Flutter package for managing file transfers with progress tracking, queue management, social media-inspired UI widgets, and injectable handlers. Built on top of `background_downloader` ^9.4.3.
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
+| **Parallel Downloads** | Split large files into chunks for faster downloads |
 | **Queue Management** | Control concurrent transfers with priority queuing |
+| **Batch Operations** | Download/upload multiple files efficiently |
 | **Message Widgets** | Ready-to-use widgets for chat applications |
 | **Social Media Themes** | WhatsApp, Telegram, Instagram-inspired designs |
 | **Injectable Handlers** | Use your own upload/download providers |
 | **Background Downloads** | Continue downloads when app is in background |
+| **Foreground Mode** | Run in foreground on Android for longer tasks |
+| **Resume Failed** | Continue downloads from failure point |
+| **Shared Storage** | Move files to Downloads folder |
 | **Caching** | Automatic file caching with URL recognition |
+| **Permissions** | Built-in permissions helper |
 | **RTL Support** | Full right-to-left language support |
-| **Progress Tracking** | Real-time progress with speed and ETA |
 
 ## Platform Support
 
@@ -29,13 +34,19 @@ A comprehensive Flutter package for managing file transfers with progress tracki
 ## Table of Contents
 
 - [Installation](#installation)
+- [What's New in 1.0.0](#whats-new-in-100)
 - [Getting Started](#getting-started)
 - [Usage Scenarios](#usage-scenarios)
   - [Scenario 1: Basic File Download](#scenario-1-basic-file-download)
-  - [Scenario 2: Chat Application with Message Widgets](#scenario-2-chat-application-with-message-widgets)
-  - [Scenario 3: Queue Management for Multiple Downloads](#scenario-3-queue-management-for-multiple-downloads)
-  - [Scenario 4: Custom Download Handler](#scenario-4-custom-download-handler)
-  - [Scenario 5: Social Media Theming](#scenario-5-social-media-theming)
+  - [Scenario 2: Parallel Downloads](#scenario-2-parallel-downloads)
+  - [Scenario 3: Batch Operations](#scenario-3-batch-operations)
+  - [Scenario 4: Chat Application with Message Widgets](#scenario-4-chat-application-with-message-widgets)
+  - [Scenario 5: Queue Management](#scenario-5-queue-management)
+  - [Scenario 6: Upload Operations](#scenario-6-upload-operations)
+  - [Scenario 7: Database & Task Management](#scenario-7-database--task-management)
+  - [Scenario 8: Shared Storage](#scenario-8-shared-storage)
+  - [Scenario 9: Permissions Handling](#scenario-9-permissions-handling)
+  - [Scenario 10: Social Media Theming](#scenario-10-social-media-theming)
 - [API Reference](#api-reference)
 - [Example App](#example-app)
 - [Migration Guide](#migration-guide)
@@ -48,14 +59,49 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  file_system_management: ^0.2.1
+  file_system_management: ^1.0.0
 ```
+
+**Requirements:**
+- Dart SDK: ^3.5.0
+- Flutter: >=3.24.0
 
 Then run:
 
 ```bash
 flutter pub get
 ```
+
+---
+
+## What's New in 1.0.0
+
+### ⚠️ Breaking Changes
+- Minimum Dart SDK upgraded to 3.5.0
+- Minimum Flutter SDK upgraded to 3.24.0
+- Updated `background_downloader` to ^9.4.3
+
+### New Features
+
+| Feature | Description |
+|---------|-------------|
+| **Parallel Downloads** | `createParallelDownloadTask()` for faster large file downloads |
+| **Resume Failed** | `resumeFailedDownload()` continues from failure point |
+| **Reschedule Tasks** | `rescheduleMissingTasks()` recovers tasks after crash |
+| **Skip Existing** | Skip downloads if file already exists |
+| **Foreground Mode** | Run in foreground on Android for longer tasks |
+| **Request Timeout** | Configurable timeout duration |
+| **Storage Check** | `availableSpace()` before downloading large files |
+| **Permissions** | `permissions` getter for notifications/storage |
+| **Batch Operations** | `downloadBatch()` and `uploadBatch()` |
+| **Shared Storage** | `moveToSharedStorage()` to Downloads folder |
+| **Database Access** | Full task record management |
+| **Task Hold/Release** | Control task execution timing |
+| **Binary Upload** | Raw bytes upload without multipart |
+| **Multi Upload** | Upload multiple files in single request |
+| **Data Upload** | Upload data from memory |
+| **Task Options** | Lifecycle callbacks (onTaskStart, onTaskFinished) |
+| **Pause/Resume/Cancel** | Individual download controls |
 
 ---
 
@@ -72,21 +118,40 @@ void main() async {
   // Initialize directories
   await AppDirectory.init();
 
-  // Initialize the file system controller
-  await FileSystemController.instance.initialize();
+  // Initialize with new v1.0.0 options
+  await FileSystemController.instance.initialize(
+    skipExistingFiles: true,           // Skip if file exists
+    skipExistingFilesMinSize: 1024,    // Only skip files > 1KB
+    runInForeground: true,             // Android foreground mode
+    requestTimeout: Duration(seconds: 30),
+  );
 
   runApp(MyApp());
 }
 ```
 
-### 2. Apply Theme (Optional)
+### 2. Check Permissions
+
+```dart
+// Check notification permission
+final status = await FileSystemController.instance.permissions.status(
+  PermissionType.notifications,
+);
+
+if (status != PermissionStatus.granted) {
+  await FileSystemController.instance.permissions.request(
+    PermissionType.notifications,
+  );
+}
+```
+
+### 3. Apply Theme (Optional)
 
 ```dart
 MaterialApp(
   theme: ThemeData(
     extensions: [SocialTransferThemeData.whatsapp()],
   ),
-  // ...
 )
 ```
 
@@ -99,11 +164,23 @@ MaterialApp(
 Download a file with progress tracking and caching:
 
 ```dart
-// Create a download task
+// Create a download task with new options
 final task = createDownloadTask(
   url: 'https://example.com/document.pdf',
   directory: 'downloads',
   baseDirectory: BaseDirectory.applicationDocuments,
+  priority: 8,               // Higher priority (0-10)
+  requiresWiFi: false,       // Allow mobile data
+  retries: 3,                // Auto-retry 3 times
+  options: createTaskOptions(
+    onTaskStart: (task) async {
+      print('Starting: ${task.filename}');
+      return task;  // Return null to cancel
+    },
+    onTaskFinished: (task, status) {
+      print('Finished: ${task.filename} - $status');
+    },
+  ),
 );
 
 // Enqueue the download
@@ -128,16 +205,94 @@ switch (result) {
     });
 
   case EnqueueInProgress(:final controller):
-    // Download already in progress, attach to existing stream
+    // Download already in progress
     controller.stream.listen((item) => print(item.progressText));
 
   case EnqueuePending(:final controller):
-    // Download queued, will start soon
+    // Download queued
     print('Download pending...');
 }
 ```
 
-### Scenario 2: Chat Application with Message Widgets
+### Scenario 2: Parallel Downloads
+
+Speed up large file downloads by splitting into chunks:
+
+```dart
+// Create parallel download task (4 chunks by default)
+final parallelTask = createParallelDownloadTask(
+  url: 'https://example.com/large-file.zip',
+  chunks: 8,                    // Split into 8 parallel chunks
+  filename: 'large-file.zip',
+  directory: 'downloads',
+  baseDirectory: BaseDirectory.applicationDocuments,
+  priority: 10,                 // Highest priority
+);
+
+// Enqueue like a regular download
+final result = await FileSystemController.instance.enqueueDownload(parallelTask);
+```
+
+#### Using Multiple URLs/Mirrors
+
+```dart
+// Use multiple URLs for different chunks
+final parallelTask = createParallelDownloadTask(
+  url: 'https://mirror1.example.com/file.zip',
+  urls: [
+    'https://mirror1.example.com/file.zip',
+    'https://mirror2.example.com/file.zip',
+    'https://mirror3.example.com/file.zip',
+  ],
+  chunks: 6,
+);
+```
+
+### Scenario 3: Batch Operations
+
+Download or upload multiple files efficiently:
+
+```dart
+// Create multiple download tasks
+final tasks = [
+  createDownloadTask(url: 'https://example.com/file1.pdf'),
+  createDownloadTask(url: 'https://example.com/file2.pdf'),
+  createDownloadTask(url: 'https://example.com/file3.pdf'),
+  createDownloadTask(url: 'https://example.com/file4.pdf'),
+  createDownloadTask(url: 'https://example.com/file5.pdf'),
+];
+
+// Download batch with progress tracking
+final batch = await FileSystemController.instance.downloadBatch(
+  tasks,
+  onProgress: (succeeded, failed, total) {
+    print('Progress: $succeeded/$total succeeded, $failed failed');
+  },
+  onTaskComplete: (task, status) {
+    print('${task.filename}: $status');
+  },
+);
+
+print('Batch complete: ${batch.succeeded}/${batch.total} succeeded');
+```
+
+#### Batch Uploads
+
+```dart
+final uploadTasks = [
+  createUploadTask(url: uploadUrl, filePath: '/path/to/file1.jpg'),
+  createUploadTask(url: uploadUrl, filePath: '/path/to/file2.jpg'),
+];
+
+final batch = await FileSystemController.instance.uploadBatch(
+  uploadTasks,
+  onProgress: (succeeded, failed, total) {
+    print('Uploaded: $succeeded/$total');
+  },
+);
+```
+
+### Scenario 4: Chat Application with Message Widgets
 
 Build a messaging app with transfer widgets:
 
@@ -152,9 +307,9 @@ ImageMessageTransferWidget(
   config: TransferWidgetConfig(
     direction: BubbleDirection.incoming,
     autoStart: false,
+    allowPauseResume: true,
   ),
   onDownload: (payload) async* {
-    // Your download implementation
     yield* myDownloadService.download(payload.url);
   },
   onFullScreen: (path) => Navigator.push(
@@ -198,18 +353,9 @@ DocumentMessageTransferWidget(
   onDownload: (payload) => downloadService.download(payload),
   onOpen: (path) => openPdfViewer(path),
 )
-
-// Generic file message
-FileMessageTransferWidget(
-  url: 'https://example.com/archive.zip',
-  fileName: 'project_files.zip',
-  fileSize: 50 * 1024 * 1024,
-  onDownload: (payload) => downloadService.download(payload),
-  onOpen: (path) => shareFile(path),
-)
 ```
 
-### Scenario 3: Queue Management for Multiple Downloads
+### Scenario 5: Queue Management
 
 Control concurrent downloads with priority queuing:
 
@@ -232,11 +378,6 @@ queue.addUrl(
   priority: TransferPriority.normal,  // Queued normally
 );
 
-queue.addUrl(
-  'https://example.com/background.pdf',
-  priority: TransferPriority.low,     // Downloads last
-);
-
 // Monitor queue state
 queue.stateStream.listen((state) {
   print('Running: ${state.runningCount}/${state.maxConcurrent}');
@@ -245,147 +386,287 @@ queue.stateStream.listen((state) {
 });
 
 // Queue control operations
-queue.pause();                              // Pause queue (running continues)
-queue.start();                              // Resume queue
-queue.cancel('download_id');                // Cancel specific download
-queue.cancelAll();                          // Cancel all downloads
-queue.retry('download_id');                 // Retry failed download
-queue.moveToFront('download_id');           // Move to front of queue
-queue.changePriority('id', TransferPriority.urgent);  // Change priority
-queue.maxConcurrent = 5;                    // Adjust concurrency dynamically
+queue.pause();
+queue.start();
+queue.cancel('download_id');
+queue.cancelAll();
+queue.retry('download_id');
+queue.moveToFront('download_id');
+queue.changePriority('id', TransferPriority.urgent);
+queue.maxConcurrent = 5;  // Adjust dynamically
 
 // Wait for all downloads
 final results = await queue.waitForAll();
 ```
 
-#### Using Queue with Message Widgets
+#### Individual Pause/Resume/Cancel
 
 ```dart
-// Create a queued provider
-final provider = QueuedTransferProvider(
-  maxConcurrent: 3,
-  downloadExecutor: (task, token) async* {
-    yield* myDownloadService.download(task.url, token);
-  },
-);
+final provider = RealDownloadProvider(maxConcurrent: 3);
 
-// Or use with existing handler
-final provider = QueuedTransferProvider.withHandler(
-  maxConcurrent: 3,
-  handler: MyDownloadHandler(),
-);
+// Start download
+provider.enqueueDownload(url: 'https://example.com/file.zip');
 
-// Use with widgets
-ImageMessageTransferWidget(
-  url: 'https://example.com/image1.jpg',
-  onDownload: provider.createDownloadCallback(
-    priority: TransferPriority.high,
-  ),
-)
+// Pause specific download
+await provider.pauseDownload('https://example.com/file.zip');
 
-// Show queue status in UI
-StreamBuilder<TransferQueueState>(
-  stream: provider.stateStream,
-  builder: (context, snapshot) {
-    final state = snapshot.data ?? provider.state;
-    return Row(
-      children: [
-        Text('${state.runningCount} running'),
-        Text('${state.pendingCount} queued'),
-        LinearProgressIndicator(value: state.overallProgress),
-      ],
-    );
-  },
-)
+// Check if paused
+final isPaused = provider.isDownloadPaused('https://example.com/file.zip');
+
+// Resume download
+await provider.resumeDownload('https://example.com/file.zip');
+
+// Cancel download
+provider.cancel('https://example.com/file.zip');
 ```
 
-### Scenario 4: Custom Download Handler
+### Scenario 6: Upload Operations
 
-Implement your own download logic:
+#### Standard Upload (Multipart)
 
 ```dart
-class MyDownloadHandler implements DownloadHandler {
-  final HttpClient _client;
+final task = createUploadTask(
+  url: 'https://api.example.com/upload',
+  filePath: '/path/to/file.jpg',
+  filename: 'photo.jpg',
+  mimeType: 'image/jpeg',
+  headers: {'Authorization': 'Bearer token'},
+  fields: {'description': 'My photo', 'album': 'vacation'},
+  priority: 8,
+  retries: 2,
+);
 
-  MyDownloadHandler(this._client);
+await FileSystemController.instance.enqueueUpload(task);
+```
 
-  @override
-  Stream<TransferProgress> download(
-    DownloadPayload payload, {
-    TransferConfig? config,
-    CancellationToken? cancellationToken,
-  }) async* {
-    final request = await _client.getUrl(Uri.parse(payload.url));
+#### Binary Upload (Raw bytes)
 
-    // Add custom headers
-    if (payload.headers != null) {
-      payload.headers!.forEach((key, value) {
-        request.headers.add(key, value);
-      });
-    }
+```dart
+// For APIs expecting raw file content in request body
+final task = createBinaryUploadTask(
+  url: 'https://api.example.com/upload',
+  filePath: '/path/to/file.bin',
+  httpRequestMethod: 'PUT',
+  mimeType: 'application/octet-stream',
+);
 
-    final response = await request.close();
-    final totalBytes = response.contentLength;
-    var bytesReceived = 0;
+await FileSystemController.instance.enqueueUpload(task);
+```
 
-    await for (final chunk in response) {
-      // Check for cancellation
-      if (cancellationToken?.isCancelled ?? false) {
-        yield TransferProgress(
-          status: TransferStatus.cancelled,
-          bytesTransferred: bytesReceived,
-          totalBytes: totalBytes,
-        );
-        return;
-      }
+#### Multi-File Upload
 
-      bytesReceived += chunk.length;
+```dart
+// Upload multiple files in a single request
+final task = createMultiUploadTask(
+  url: 'https://api.example.com/upload',
+  files: [
+    ('photo1', '/path/to/image1.jpg'),
+    ('photo2', '/path/to/image2.jpg'),
+    ('document', '/path/to/file.pdf'),
+  ],
+  fields: {'album': 'vacation'},
+);
 
-      yield TransferProgress(
-        bytesTransferred: bytesReceived,
-        totalBytes: totalBytes,
-        status: TransferStatus.running,
+await FileSystemController.instance.enqueueUpload(task);
+```
+
+#### Data Upload (From Memory)
+
+```dart
+// Upload generated data or small payloads
+final task = createDataUploadTask(
+  url: 'https://api.example.com/data',
+  data: jsonEncode({'name': 'John', 'age': 30}),
+  contentType: 'application/json',
+  httpRequestMethod: 'POST',
+);
+
+await FileSystemController.instance.enqueueUpload(task);
+```
+
+#### Authenticated Upload
+
+```dart
+final task = createUploadTask(
+  url: 'https://api.example.com/upload',
+  filePath: '/path/to/file.jpg',
+  options: createAuthenticatedOptions(
+    username: 'user',
+    password: 'pass',
+    onTaskFinished: (task, status) {
+      print('Upload finished: $status');
+    },
+  ),
+);
+```
+
+### Scenario 7: Database & Task Management
+
+#### Resume Failed Downloads
+
+```dart
+final controller = FileSystemController.instance;
+
+// Get failed downloads
+final failedRecords = await controller.getRecordsByStatus(TaskStatus.failed);
+
+for (final record in failedRecords) {
+  final item = TransferItem.fromRecord(record);
+
+  // Resume from where it stopped (requires server ETag support)
+  final success = await controller.resumeFailedDownload(item);
+  print('Resume ${item.filename}: $success');
+}
+```
+
+#### Reschedule Missing Tasks (After Crash)
+
+```dart
+// Recover tasks after app restart/crash
+final (succeeded, failed) = await FileSystemController.instance.rescheduleMissingTasks();
+
+print('Rescheduled ${succeeded.length} tasks');
+print('Failed to reschedule ${failed.length} tasks');
+```
+
+#### Database Operations
+
+```dart
+final controller = FileSystemController.instance;
+
+// Get all records
+final allRecords = await controller.getAllRecords();
+
+// Get record by ID
+final record = await controller.getRecordById('task-id');
+
+// Get records by status
+final completedRecords = await controller.getRecordsByStatus(TaskStatus.complete);
+final runningRecords = await controller.getRecordsByStatus(TaskStatus.running);
+
+// Delete specific record
+await controller.deleteRecord('task-id');
+
+// Delete all records
+await controller.deleteAllRecords();
+
+// Delete by status
+await controller.deleteRecordsByStatus(TaskStatus.failed);
+```
+
+#### Task Hold/Release
+
+```dart
+final controller = FileSystemController.instance;
+
+// Create task but don't start yet
+final task = createDownloadTask(url: 'https://example.com/file.zip');
+
+// Hold the task (prevents execution)
+await controller.holdTask(task);
+
+// Enqueue (won't start because it's held)
+await controller.enqueueDownload(task);
+
+// Later, release the task to start
+await controller.releaseTask(task);
+
+// Or release all held tasks in a group
+await controller.releaseHeldTasks(group: 'my-group');
+```
+
+#### Task Queries
+
+```dart
+final controller = FileSystemController.instance;
+
+// Get all tracked tasks
+final allTasks = await controller.getAllTasks();
+
+// Get tasks in a specific group
+final groupTasks = await controller.getTasksByGroup('downloads');
+
+// Get task by ID
+final task = await controller.getTaskById('task-id');
+
+// Reset (cancel all and clear database)
+await controller.reset();
+```
+
+### Scenario 8: Shared Storage
+
+Move completed downloads to public Downloads folder:
+
+```dart
+final controller = FileSystemController.instance;
+
+// After download completes
+final result = await controller.enqueueDownload(task);
+
+if (result case EnqueueStarted(:final controller)) {
+  controller.stream.listen((item) async {
+    if (item.isComplete) {
+      // Move to Downloads folder
+      final sharedPath = await FileSystemController.instance.moveToSharedStorage(
+        item,
+        destination: SharedStorage.downloads,
+        directory: 'MyApp',  // Creates MyApp folder in Downloads
+        mimeType: 'application/pdf',
       );
+
+      print('File moved to: $sharedPath');
     }
-
-    yield TransferProgress.completed(totalBytes: totalBytes);
-  }
-
-  @override
-  Future<TransferResult> downloadAndComplete(
-    DownloadPayload payload, {
-    TransferConfig? config,
-    CancellationToken? cancellationToken,
-  }) async {
-    TransferProgress? lastProgress;
-
-    await for (final progress in download(
-      payload,
-      config: config,
-      cancellationToken: cancellationToken,
-    )) {
-      lastProgress = progress;
-    }
-
-    if (lastProgress?.isCompleted ?? false) {
-      return TransferSuccess(
-        localPath: payload.destinationPath ?? '',
-        remoteUrl: payload.url,
-      );
-    }
-
-    return TransferFailure(message: 'Download failed');
-  }
+  });
 }
 
-// Use the handler
-ImageMessageTransferWidget(
-  url: 'https://example.com/image.jpg',
-  downloadHandler: MyDownloadHandler(HttpClient()),
-)
+// Check if file is in shared storage
+final isShared = await controller.isInSharedStorage(filePath);
+
+// Open file from path
+await controller.openFileByPath(filePath, mimeType: 'application/pdf');
 ```
 
-### Scenario 5: Social Media Theming
+#### Check Available Space
+
+```dart
+// Check space before downloading large file
+final availableBytes = await FileSystemController.instance.availableSpace(
+  baseDirectory: BaseDirectory.applicationDocuments,
+);
+
+final requiredBytes = 500 * 1024 * 1024;  // 500 MB
+
+if (availableBytes != null && availableBytes > requiredBytes) {
+  // Safe to download
+  await controller.enqueueDownload(largeFileTask);
+} else {
+  // Warn user about insufficient space
+  showInsufficientSpaceDialog();
+}
+```
+
+### Scenario 9: Permissions Handling
+
+```dart
+final permissions = FileSystemController.instance.permissions;
+
+// Check notification permission
+final notifStatus = await permissions.status(PermissionType.notifications);
+
+if (notifStatus != PermissionStatus.granted) {
+  final result = await permissions.request(PermissionType.notifications);
+  print('Notification permission: $result');
+}
+
+// Check storage permission (Android)
+final storageStatus = await permissions.status(PermissionType.storage);
+
+if (storageStatus == PermissionStatus.denied) {
+  await permissions.request(PermissionType.storage);
+}
+```
+
+### Scenario 10: Social Media Theming
 
 Apply pre-built or custom themes:
 
@@ -433,41 +714,145 @@ MaterialApp(
     ],
   ),
 )
-
-// Customize existing theme
-SocialTransferThemeData.whatsapp().copyWith(
-  primaryColor: Colors.teal,
-  actionButtonSize: 56,
-)
-
-// Access theme in widget
-final theme = context.socialTransferTheme;
-// or
-final theme = Theme.of(context).extension<SocialTransferThemeData>();
 ```
 
 ---
 
 ## API Reference
 
-### Core Classes
+### FileSystemController
+
+Main controller for file operations.
+
+#### Initialization
+
+| Method | Description |
+|--------|-------------|
+| `initialize()` | Initialize the controller with options |
+| `dispose()` | Cleanup resources |
+
+**Initialize Options:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `skipExistingFiles` | `bool` | `false` | Skip if file exists |
+| `skipExistingFilesMinSize` | `int?` | `null` | Min size for skipping |
+| `runInForeground` | `bool` | `false` | Android foreground mode |
+| `requestTimeout` | `Duration?` | `null` | Request timeout |
+
+#### Download Operations
+
+| Method | Description |
+|--------|-------------|
+| `enqueueDownload(task)` | Enqueue a download task |
+| `pause(item)` | Pause a download |
+| `resume(item)` | Resume a download |
+| `cancel(item)` | Cancel a download |
+| `retry(item)` | Retry a failed download |
+| `resumeFailedDownload(item)` | Resume from failure point |
+| `openFile(item)` | Open completed file |
+
+#### Batch Operations
+
+| Method | Description |
+|--------|-------------|
+| `downloadBatch(tasks)` | Download multiple files |
+| `uploadBatch(tasks)` | Upload multiple files |
+| `pauseAll(items)` | Pause multiple transfers |
+| `resumeAll(items)` | Resume multiple transfers |
+| `cancelAll(items)` | Cancel multiple transfers |
+
+#### Shared Storage
+
+| Method | Description |
+|--------|-------------|
+| `moveToSharedStorage(item)` | Move to Downloads folder |
+| `isInSharedStorage(path)` | Check if in shared storage |
+| `openFileByPath(path)` | Open file by path |
+| `availableSpace()` | Check available storage |
+
+#### Database Operations
+
+| Method | Description |
+|--------|-------------|
+| `getAllRecords()` | Get all task records |
+| `getRecordById(id)` | Get record by ID |
+| `getRecordsByStatus(status)` | Get records by status |
+| `deleteRecord(id)` | Delete a record |
+| `deleteAllRecords()` | Delete all records |
+| `deleteRecordsByStatus(status)` | Delete by status |
+
+#### Task Management
+
+| Method | Description |
+|--------|-------------|
+| `holdTask(task)` | Hold task from executing |
+| `releaseTask(task)` | Release held task |
+| `releaseHeldTasks()` | Release all held tasks |
+| `getAllTasks()` | Get all tracked tasks |
+| `getTasksByGroup(group)` | Get tasks by group |
+| `getTaskById(id)` | Get task by ID |
+| `rescheduleMissingTasks()` | Recover tasks after crash |
+| `reset()` | Cancel all and clear database |
+
+#### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `permissions` | `Permissions` | Permissions helper |
+| `isInitialized` | `bool` | Initialization state |
+| `activeTransfers` | `Map<String, TransferItem>` | Active transfers |
+| `completedPaths` | `Map<String, String>` | Cached file paths |
+
+### Task Factory Functions
+
+| Function | Description |
+|----------|-------------|
+| `createDownloadTask()` | Create standard download task |
+| `createParallelDownloadTask()` | Create parallel download task |
+| `createUploadTask()` | Create multipart upload task |
+| `createBinaryUploadTask()` | Create binary upload task |
+| `createMultiUploadTask()` | Create multi-file upload task |
+| `createDataUploadTask()` | Create data upload task |
+| `createTaskOptions()` | Create task lifecycle options |
+| `createAuthenticatedOptions()` | Create authenticated options |
+
+### createDownloadTask Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `url` | `String` | required | Download URL |
+| `filename` | `String?` | URL hash | File name |
+| `directory` | `String` | `""` | Subdirectory |
+| `baseDirectory` | `BaseDirectory` | `temporary` | Base directory |
+| `allowPause` | `bool` | `true` | Allow pausing |
+| `updates` | `Updates` | `statusAndProgress` | Update type |
+| `group` | `String?` | default | Task group |
+| `headers` | `Map<String, String>?` | `null` | HTTP headers |
+| `metaData` | `String?` | `null` | Custom metadata |
+| `priority` | `int` | `5` | Priority (0-10) |
+| `requiresWiFi` | `bool` | `false` | Require WiFi |
+| `retries` | `int` | `0` | Auto-retry count |
+| `options` | `TaskOptions?` | `null` | Task options |
+
+### createParallelDownloadTask Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `url` | `String` | required | Primary URL |
+| `urls` | `List<String>?` | `null` | Mirror URLs |
+| `chunks` | `int` | `4` | Parallel chunks |
+| Plus all standard download options |
+
+### Queue Classes
 
 | Class | Description |
 |-------|-------------|
-| `FileSystemController` | Main controller for file operations |
-| `TransferQueueManager<T>` | Generic queue manager for transfers |
-| `DownloadQueueManager` | Specialized queue for downloads |
-| `UploadQueueManager` | Specialized queue for uploads |
-| `QueuedTransferProvider` | Provider for widget integration |
-
-### Transfer Types
-
-| Class | Description |
-|-------|-------------|
-| `TransferProgress` | Progress information (bytes, speed, ETA) |
-| `TransferResult` | Sealed class: `TransferSuccess`, `TransferFailure`, `TransferCancelled` |
-| `TransferStatus` | Enum: `pending`, `running`, `paused`, `completed`, `failed`, `cancelled` |
-| `TransferPriority` | Enum: `urgent`, `high`, `normal`, `low` |
+| `TransferQueueManager<T>` | Generic queue manager |
+| `DownloadQueueManager` | Specialized download queue |
+| `UploadQueueManager` | Specialized upload queue |
+| `QueuedTransferProvider` | Widget integration provider |
+| `RealDownloadProvider` | Production download provider |
 
 ### Message Widgets
 
@@ -479,52 +864,15 @@ final theme = Theme.of(context).extension<SocialTransferThemeData>();
 | `FileMessageTransferWidget` | Generic files (ZIP, APK, etc.) |
 | `DocumentMessageTransferWidget` | PDF, DOCX, XLSX, PPTX |
 
-### Handler Interfaces
-
-| Interface | Description |
-|-----------|-------------|
-| `UploadHandler` | Implement for custom upload logic |
-| `DownloadHandler` | Implement for custom download logic |
-| `TransferHandler` | Combined upload + download handler |
-
-### Configuration
+### Transfer Types
 
 | Class | Description |
 |-------|-------------|
-| `TransferWidgetConfig` | Widget behavior configuration |
-| `TransferConfig` | Transfer operation configuration |
-| `SocialTransferThemeData` | Theme configuration |
-| `CancellationToken` | Transfer cancellation control |
-
-### TransferProgress Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `bytesTransferred` | `int` | Bytes transferred so far |
-| `totalBytes` | `int` | Total bytes (-1 if unknown) |
-| `progress` | `double` | Progress ratio (0.0 - 1.0) |
-| `progressPercent` | `double` | Progress percentage (0 - 100) |
-| `bytesPerSecond` | `double` | Transfer speed |
-| `estimatedTimeRemaining` | `Duration?` | ETA |
-| `status` | `TransferStatus` | Current status |
-| `progressText` | `String` | Formatted: "5.2 MB / 10.0 MB" |
-| `speedText` | `String` | Formatted: "1.5 MB/s" |
-| `etaText` | `String` | Formatted: "2:30 remaining" |
-
-### TransferWidgetConfig Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `autoStart` | `bool` | `false` | Start transfer automatically |
-| `showActionButton` | `bool` | `true` | Show download/upload button |
-| `showProgress` | `bool` | `true` | Show progress percentage |
-| `showSpeed` | `bool` | `true` | Show transfer speed |
-| `showFileSize` | `bool` | `true` | Show file size |
-| `showEta` | `bool` | `false` | Show estimated time |
-| `allowPauseResume` | `bool` | `true` | Enable pause/resume |
-| `allowRetry` | `bool` | `true` | Enable retry on failure |
-| `allowCancel` | `bool` | `true` | Enable cancel |
-| `direction` | `BubbleDirection` | `outgoing` | Message direction |
+| `TransferProgress` | Progress information (bytes, speed, ETA) |
+| `TransferResult` | Sealed: `TransferSuccess`, `TransferFailure`, `TransferCancelled` |
+| `TransferStatus` | Enum: `pending`, `running`, `paused`, `completed`, `failed`, `cancelled` |
+| `TransferPriority` | Enum: `urgent`, `high`, `normal`, `low` |
+| `TransferItem` | Transfer state wrapper |
 
 ---
 
@@ -535,6 +883,7 @@ The package includes a comprehensive example app demonstrating:
 - **Chat Demo**: Message widgets with different file types
 - **Queue Demo**: Queue management with priority control
 - **Queued Chat Demo**: WhatsApp-like interface with real downloads
+- **Video/Audio Playback**: Media playback after download
 - **Settings**: Theme switching, dark mode, RTL toggle
 
 Run the example:
@@ -544,89 +893,65 @@ cd example
 flutter run
 ```
 
-### Example: WhatsApp-like Chat with Real Downloads
-
-```dart
-class ChatScreen extends StatefulWidget {
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  late final RealDownloadProvider _provider;
-
-  @override
-  void initState() {
-    super.initState();
-    _provider = RealDownloadProvider(maxConcurrent: 3);
-  }
-
-  @override
-  void dispose() {
-    _provider.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Chat'),
-        actions: [
-          // Queue status indicator
-          StreamBuilder<TransferQueueState>(
-            stream: _provider.stateStream,
-            builder: (context, snapshot) {
-              final state = snapshot.data;
-              if (state == null || state.totalCount == 0) {
-                return SizedBox.shrink();
-              }
-              return Chip(
-                label: Text('${state.runningCount}/${state.pendingCount}'),
-              );
-            },
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: messages.length,
-        itemBuilder: (context, index) {
-          final message = messages[index];
-          return _buildMessage(message);
-        },
-      ),
-    );
-  }
-
-  Widget _buildMessage(Message message) {
-    switch (message.type) {
-      case MessageType.image:
-        return ImageMessageTransferWidget(
-          url: message.url,
-          fileName: message.fileName,
-          onDownload: (payload) => _provider.enqueueDownload(
-            url: payload.url,
-            expectedSize: payload.expectedSize,
-          ),
-        );
-      case MessageType.video:
-        return VideoMessageTransferWidget(
-          url: message.url,
-          duration: message.duration,
-          onDownload: (payload) => _provider.enqueueDownload(
-            url: payload.url,
-          ),
-          onPlay: (path) => _openVideoPlayer(path),
-        );
-      // ... other types
-    }
-  }
-}
-```
-
 ---
 
 ## Migration Guide
+
+### From 0.2.x to 1.0.0
+
+1. **Update SDK requirements**
+   ```yaml
+   environment:
+     sdk: ^3.5.0
+     flutter: ">=3.24.0"
+   ```
+
+2. **New initialization options**
+   ```dart
+   // Old
+   await FileSystemController.instance.initialize();
+
+   // New (with options)
+   await FileSystemController.instance.initialize(
+     skipExistingFiles: true,
+     runInForeground: true,
+     requestTimeout: Duration(seconds: 30),
+   );
+   ```
+
+3. **New download task options**
+   ```dart
+   // Old
+   final task = createDownloadTask(url: url);
+
+   // New (with priority, retries, options)
+   final task = createDownloadTask(
+     url: url,
+     priority: 8,
+     requiresWiFi: false,
+     retries: 3,
+     options: createTaskOptions(
+       onTaskStart: (task) async => task,
+       onTaskFinished: (task, status) {},
+     ),
+   );
+   ```
+
+4. **Parallel downloads**
+   ```dart
+   // New in 1.0.0
+   final task = createParallelDownloadTask(
+     url: url,
+     chunks: 8,
+   );
+   ```
+
+5. **Batch operations**
+   ```dart
+   // New in 1.0.0
+   await controller.downloadBatch(tasks, onProgress: ...);
+   await controller.uploadBatch(tasks, onProgress: ...);
+   ```
 
 ### From 0.1.x to 0.2.x
 
@@ -641,30 +966,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
 2. **New message widgets**
    ```dart
-   // Old: Manual widget creation
-
-   // New: Use pre-built widgets
+   // Use pre-built widgets
    AudioMessageTransferWidget(...)
    ImageMessageTransferWidget(...)
-   VideoMessageTransferWidget(...)
-   ```
-
-3. **Theme system updated**
-   ```dart
-   // Old
-   SocialTransferTheme(child: ...)
-
-   // New
-   ThemeData(extensions: [SocialTransferThemeData.whatsapp()])
-   ```
-
-4. **Custom handlers**
-   ```dart
-   // New: Use onDownload/onUpload callbacks
-   ImageMessageTransferWidget(
-     onDownload: (payload) async* { ... },
-     onUpload: (payload) async* { ... },
-   )
    ```
 
 ---
@@ -673,7 +977,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
 | Package | Purpose |
 |---------|---------|
-| `background_downloader` | Background download support |
+| `background_downloader` | Background download support (^9.4.3) |
 | `cached_network_image` | Network image caching |
 | `path_provider` | System directories |
 | `crypto` | Hash generation |
@@ -692,5 +996,5 @@ Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTIN
 
 ## Support
 
-- [GitHub Issues](https://github.com/example/file_system_management/issues)
+- [GitHub Issues](https://github.com/GeniusSystems24/file_system_management/issues)
 - [Documentation](https://pub.dev/packages/file_system_management)

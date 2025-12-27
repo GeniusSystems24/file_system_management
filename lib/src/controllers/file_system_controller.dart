@@ -553,6 +553,163 @@ class FileSystemController {
     return result;
   }
 
+  /// Downloads multiple files in batch.
+  ///
+  /// Returns a stream of batch progress updates.
+  /// Use [onTaskComplete] callback to handle individual task completion.
+  Future<Batch> downloadBatch(
+    List<DownloadTask> tasks, {
+    BatchProgressCallback? onProgress,
+    void Function(Task task, TaskStatus status)? onTaskComplete,
+    int batchSize = 5,
+  }) async {
+    return await _fileDownloader.downloadBatch(
+      tasks,
+      batchProgressCallback: onProgress,
+      taskStatusCallback: onTaskComplete,
+    );
+  }
+
+  /// Uploads multiple files in batch.
+  Future<Batch> uploadBatch(
+    List<UploadTask> tasks, {
+    BatchProgressCallback? onProgress,
+    void Function(Task task, TaskStatus status)? onTaskComplete,
+  }) async {
+    return await _fileDownloader.uploadBatch(
+      tasks,
+      batchProgressCallback: onProgress,
+      taskStatusCallback: onTaskComplete,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SHARED STORAGE OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Moves a completed download to shared storage (e.g., Downloads folder).
+  ///
+  /// [destination] - The shared storage destination.
+  /// [directory] - Optional subdirectory within shared storage.
+  /// [mimeType] - Optional MIME type for the file.
+  ///
+  /// Returns the path in shared storage, or null if failed.
+  Future<String?> moveToSharedStorage(
+    TransferItem item, {
+    SharedStorage destination = SharedStorage.downloads,
+    String? directory,
+    String? mimeType,
+  }) async {
+    if (!item.isComplete) return null;
+
+    final task = item.task;
+    if (task is! DownloadTask) return null;
+
+    return await _fileDownloader.moveToSharedStorage(
+      task,
+      destination,
+      directory: directory ?? '',
+      mimeType: mimeType,
+    );
+  }
+
+  /// Checks if a path is in shared storage.
+  Future<bool> isInSharedStorage(String path) async {
+    return await _fileDownloader.pathInSharedStorage(path) != null;
+  }
+
+  /// Opens a file in shared storage by path.
+  Future<bool> openFileByPath(String filePath, {String? mimeType}) async {
+    return await _fileDownloader.openFile(
+      filePath: filePath,
+      mimeType: mimeType,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DATABASE OPERATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Gets all task records from the database.
+  Future<List<TaskRecord>> getAllRecords() async {
+    return await _fileDownloader.database.allRecords();
+  }
+
+  /// Gets a task record by ID.
+  Future<TaskRecord?> getRecordById(String taskId) async {
+    return await _fileDownloader.database.recordForId(taskId);
+  }
+
+  /// Gets all records with a specific status.
+  Future<List<TaskRecord>> getRecordsByStatus(TaskStatus status) async {
+    return await _fileDownloader.database.allRecordsWithStatus(status);
+  }
+
+  /// Deletes a record from the database.
+  Future<void> deleteRecord(String taskId) async {
+    await _fileDownloader.database.deleteRecordWithId(taskId);
+  }
+
+  /// Deletes all records from the database.
+  Future<void> deleteAllRecords() async {
+    await _fileDownloader.database.deleteAllRecords();
+  }
+
+  /// Deletes records with specific status.
+  Future<void> deleteRecordsByStatus(TaskStatus status) async {
+    await _fileDownloader.database.deleteRecordsWithStatus(status);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TASK HOLD/RELEASE (for managing task execution)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Holds a task to prevent it from executing.
+  ///
+  /// Useful for queuing tasks without starting them immediately.
+  Future<bool> holdTask(Task task) async {
+    return await _fileDownloader.hold(task);
+  }
+
+  /// Releases a held task to allow execution.
+  Future<bool> releaseTask(Task task) async {
+    return await _fileDownloader.release(task);
+  }
+
+  /// Releases all held tasks in a group.
+  Future<bool> releaseHeldTasks({String? group}) async {
+    return await _fileDownloader.releaseHeldTasks(
+      group: group ?? FileDownloader.defaultGroup,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TASK INFO & QUERIES
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Gets all tasks currently being tracked.
+  Future<List<Task>> getAllTasks() async {
+    return await _fileDownloader.allTasks();
+  }
+
+  /// Gets all tasks in a specific group.
+  Future<List<Task>> getTasksByGroup(String group) async {
+    return await _fileDownloader.allTasks(group: group);
+  }
+
+  /// Gets a task by ID.
+  Future<Task?> getTaskById(String taskId) async {
+    return await _fileDownloader.taskForId(taskId);
+  }
+
+  /// Resets the downloader (cancels all tasks and clears database).
+  Future<void> reset({String? group}) async {
+    await _fileDownloader.reset(group: group ?? FileDownloader.defaultGroup);
+    _activeTaskUrls.clear();
+    _activeTransfers.clear();
+    _completedPaths.clear();
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CONFIGURATION
   // ═══════════════════════════════════════════════════════════════════════════
@@ -847,6 +1004,19 @@ ParallelDownloadTask createParallelDownloadTask({
 }
 
 /// Creates an upload task with standard configuration.
+///
+/// [url] - The URL to upload to.
+/// [filePath] - The local file path to upload.
+/// [filename] - Optional filename (defaults to extracted from path).
+/// [updates] - What updates to receive.
+/// [group] - Task group for notifications.
+/// [headers] - Custom HTTP headers.
+/// [metaData] - Custom metadata string.
+/// [httpRequestMethod] - HTTP method (POST, PUT, etc.).
+/// [mimeType] - MIME type of the file.
+/// [fields] - Form fields to include with the upload.
+/// [priority] - Task priority (0-10).
+/// [retries] - Number of retries on failure.
 UploadTask createUploadTask({
   required String url,
   required String filePath,
@@ -856,6 +1026,10 @@ UploadTask createUploadTask({
   Map<String, String>? headers,
   String? metaData,
   String httpRequestMethod = 'POST',
+  String? mimeType,
+  Map<String, String>? fields,
+  int priority = 5,
+  int retries = 0,
 }) {
   return UploadTask(
     url: url,
@@ -865,5 +1039,133 @@ UploadTask createUploadTask({
     headers: headers ?? {},
     metaData: metaData ?? '',
     httpRequestMethod: httpRequestMethod,
+    mimeType: mimeType ?? 'application/octet-stream',
+    fields: fields ?? {},
+    priority: priority,
+    retries: retries,
+  );
+}
+
+/// Creates a binary upload task (raw bytes, no multipart).
+///
+/// Use this for APIs that expect raw file content in the request body.
+UploadTask createBinaryUploadTask({
+  required String url,
+  required String filePath,
+  String? filename,
+  Updates updates = Updates.statusAndProgress,
+  String? group,
+  Map<String, String>? headers,
+  String? metaData,
+  String httpRequestMethod = 'PUT',
+  String? mimeType,
+  int priority = 5,
+  int retries = 0,
+}) {
+  return UploadTask(
+    url: url,
+    filename: filename ?? filePath.extractFileName(),
+    updates: updates,
+    group: group ?? FileDownloader.defaultGroup,
+    headers: headers ?? {},
+    metaData: metaData ?? '',
+    httpRequestMethod: httpRequestMethod,
+    mimeType: mimeType ?? 'application/octet-stream',
+    post: 'binary',
+    priority: priority,
+    retries: retries,
+  );
+}
+
+/// Creates a multi-file upload task.
+///
+/// Use this to upload multiple files in a single request.
+MultiUploadTask createMultiUploadTask({
+  required String url,
+  required List<(String fieldName, String filePath)> files,
+  Updates updates = Updates.statusAndProgress,
+  String? group,
+  Map<String, String>? headers,
+  String? metaData,
+  String httpRequestMethod = 'POST',
+  Map<String, String>? fields,
+  int priority = 5,
+  int retries = 0,
+}) {
+  return MultiUploadTask(
+    url: url,
+    files: files,
+    updates: updates,
+    group: group ?? FileDownloader.defaultGroup,
+    headers: headers ?? {},
+    metaData: metaData ?? '',
+    httpRequestMethod: httpRequestMethod,
+    fields: fields ?? {},
+    priority: priority,
+    retries: retries,
+  );
+}
+
+/// Creates a data upload task (upload data from memory).
+///
+/// Use this for uploading generated data or small payloads.
+DataTask createDataUploadTask({
+  required String url,
+  required String data,
+  String contentType = 'application/json',
+  Updates updates = Updates.statusAndProgress,
+  String? group,
+  Map<String, String>? headers,
+  String? metaData,
+  String httpRequestMethod = 'POST',
+  int priority = 5,
+  int retries = 0,
+}) {
+  return DataTask(
+    url: url,
+    data: data,
+    contentType: contentType,
+    updates: updates,
+    group: group ?? FileDownloader.defaultGroup,
+    headers: headers ?? {},
+    metaData: metaData ?? '',
+    httpRequestMethod: httpRequestMethod,
+    priority: priority,
+    retries: retries,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TASK OPTIONS HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Creates TaskOptions with lifecycle callbacks.
+///
+/// [onTaskStart] - Called just before the task starts. Can modify the task.
+/// [onTaskFinished] - Called when task completes (success, failure, or cancel).
+/// [auth] - Authentication credentials for the request.
+TaskOptions createTaskOptions({
+  Future<Task?> Function(Task task)? onTaskStart,
+  void Function(Task task, TaskStatus status)? onTaskFinished,
+  (String username, String password)? auth,
+}) {
+  return TaskOptions(
+    onTaskStart: onTaskStart,
+    onTaskFinished: onTaskFinished,
+    auth: auth,
+  );
+}
+
+/// Creates TaskOptions for authenticated downloads.
+TaskOptions createAuthenticatedOptions({
+  required String username,
+  required String password,
+  Future<Task?> Function(Task task)? onTaskStart,
+  void Function(Task task, TaskStatus status)? onTaskFinished,
+}) {
+  return TaskOptions(
+    auth: (username, password),
+    onTaskStart: onTaskStart,
+    onTaskFinished: onTaskFinished,
   );
 }
