@@ -181,7 +181,7 @@ class MockDownloadHandler implements DownloadHandler {
       );
     }
 
-    return TransferFailure(
+    return TransferError(
       message: lastProgress?.errorMessage ?? 'Download failed',
     );
   }
@@ -270,7 +270,7 @@ class MockUploadHandler implements UploadHandler {
       );
     }
 
-    return TransferFailure(
+    return TransferError(
       message: lastProgress?.errorMessage ?? 'Upload failed',
     );
   }

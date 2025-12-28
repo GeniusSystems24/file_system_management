@@ -4,8 +4,18 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
-import '../app_directory.dart';
-import '../../models/file_type_enum.dart';
+import '../../infrastructure/storage/app_directory.dart';
+
+/// File type enumeration for categorizing files.
+enum FileType {
+  image(['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg']),
+  video(['mp4', 'avi', 'mkv', 'mov', 'wmv', 'webm', 'flv']),
+  audio(['mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a']),
+  file([]);
+
+  final List<String> extensions;
+  const FileType(this.extensions);
+}
 
 /// Extension on String for file path operations.
 extension FilePathExtension on String {
@@ -35,21 +45,21 @@ extension FilePathExtension on String {
   /// - Returns "video" if the file extension is ".mp4", ".avi", ".mkv", ".mov", ".wmv"
   /// - Returns "audio" if the file extension is ".mp3", ".wav", ".aac", ".flac", ".ogg"
   /// - Returns "document" if the file extension is not one of the above
-  FileTypeEnum? getFileType() {
+  FileType? getFileType() {
     if (isEmpty) return null;
 
     String extension = path.extension(this).replaceAll(".", "").toLowerCase();
 
     if (extension.isEmpty) return null;
 
-    if (FileTypeEnum.image.extensions.contains(extension)) {
-      return FileTypeEnum.image;
-    } else if (FileTypeEnum.video.extensions.contains(extension)) {
-      return FileTypeEnum.video;
-    } else if (FileTypeEnum.audio.extensions.contains(extension)) {
-      return FileTypeEnum.audio;
+    if (FileType.image.extensions.contains(extension)) {
+      return FileType.image;
+    } else if (FileType.video.extensions.contains(extension)) {
+      return FileType.video;
+    } else if (FileType.audio.extensions.contains(extension)) {
+      return FileType.audio;
     } else {
-      return FileTypeEnum.file;
+      return FileType.file;
     }
   }
 

@@ -200,7 +200,7 @@ abstract class BaseMessageTransferWidget extends StatefulWidget {
   final void Function(TransferResult result)? onTransferComplete;
 
   /// Called when transfer fails.
-  final void Function(TransferFailure failure)? onTransferError;
+  final void Function(TransferError error)? onTransferError;
 
   /// Called when progress updates.
   final void Function(TransferProgress progress)? onProgressUpdate;
@@ -451,17 +451,17 @@ abstract class BaseMessageTransferWidgetState<
   void _handleError(Object error) {
     if (!mounted) return;
 
-    final failure =
-        error is TransferFailure
+    final transferError =
+        error is TransferError
             ? error
-            : TransferFailure(message: error.toString());
+            : TransferError(message: error.toString());
 
     setState(() {
       _state = TransferWidgetState.failed;
-      _errorMessage = failure.message;
+      _errorMessage = transferError.message;
     });
 
-    widget.onTransferError?.call(failure);
+    widget.onTransferError?.call(transferError);
   }
 
   /// Handles stream completion.

@@ -392,7 +392,7 @@ abstract class TransferHandler implements UploadHandler, DownloadHandler {
 typedef OnUploadProgress = void Function(TransferProgress progress);
 typedef OnDownloadProgress = void Function(TransferProgress progress);
 typedef OnTransferComplete = void Function(TransferResult result);
-typedef OnTransferError = void Function(TransferFailure failure);
+typedef OnTransferError = void Function(TransferError error);
 typedef OnTransferCancel = void Function(String? reason);
 
 /// A builder class for creating transfer operations with callbacks.
@@ -464,7 +464,7 @@ class TransferBuilder {
     CancellationToken? cancellationToken,
   }) async {
     if (_uploadHandler == null) {
-      return const TransferFailure(
+      return const TransferError(
         message: 'No upload handler configured',
         code: 'NO_HANDLER',
         isRecoverable: false,
@@ -494,12 +494,12 @@ class TransferBuilder {
         }
 
         if (progress.isFailed) {
-          final failure = TransferFailure(
+          final error = TransferError(
             message: progress.errorMessage ?? 'Upload failed',
             bytesTransferred: progress.bytesTransferred,
           );
-          _onError?.call(failure);
-          return failure;
+          _onError?.call(error);
+          return error;
         }
       }
 
@@ -513,7 +513,7 @@ class TransferBuilder {
         return success;
       }
 
-      return const TransferFailure(
+      return const TransferError(
         message: 'Upload ended unexpectedly',
         code: 'UNEXPECTED_END',
       );
@@ -521,13 +521,13 @@ class TransferBuilder {
       _onCancel?.call(e.reason);
       return TransferCancelled(reason: e.reason);
     } catch (e, stackTrace) {
-      final failure = TransferFailure(
+      final error = TransferError(
         message: e.toString(),
         exception: e,
         stackTrace: stackTrace,
       );
-      _onError?.call(failure);
-      return failure;
+      _onError?.call(error);
+      return error;
     }
   }
 
@@ -538,7 +538,7 @@ class TransferBuilder {
     CancellationToken? cancellationToken,
   }) async {
     if (_downloadHandler == null) {
-      return const TransferFailure(
+      return const TransferError(
         message: 'No download handler configured',
         code: 'NO_HANDLER',
         isRecoverable: false,
@@ -567,12 +567,12 @@ class TransferBuilder {
         }
 
         if (progress.isFailed) {
-          final failure = TransferFailure(
+          final error = TransferError(
             message: progress.errorMessage ?? 'Download failed',
             bytesTransferred: progress.bytesTransferred,
           );
-          _onError?.call(failure);
-          return failure;
+          _onError?.call(error);
+          return error;
         }
       }
 
@@ -587,7 +587,7 @@ class TransferBuilder {
         return success;
       }
 
-      return const TransferFailure(
+      return const TransferError(
         message: 'Download ended unexpectedly',
         code: 'UNEXPECTED_END',
       );
@@ -595,13 +595,13 @@ class TransferBuilder {
       _onCancel?.call(e.reason);
       return TransferCancelled(reason: e.reason);
     } catch (e, stackTrace) {
-      final failure = TransferFailure(
+      final error = TransferError(
         message: e.toString(),
         exception: e,
         stackTrace: stackTrace,
       );
-      _onError?.call(failure);
-      return failure;
+      _onError?.call(error);
+      return error;
     }
   }
 }

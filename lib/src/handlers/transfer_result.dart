@@ -9,8 +9,8 @@
 /// switch (result) {
 ///   case TransferSuccess(:final path, :final url):
 ///     print('Upload successful: $url');
-///   case TransferFailure(:final error, :final code):
-///     print('Upload failed: $error');
+///   case TransferError(:final message, :final code):
+///     print('Upload failed: $message');
 ///   case TransferCancelled(:final reason):
 ///     print('Upload cancelled: $reason');
 /// }
@@ -22,7 +22,7 @@ sealed class TransferResult {
   bool get isSuccess => this is TransferSuccess;
 
   /// Whether the transfer failed.
-  bool get isFailure => this is TransferFailure;
+  bool get isFailure => this is TransferError;
 
   /// Whether the transfer was cancelled.
   bool get isCancelled => this is TransferCancelled;
@@ -73,7 +73,7 @@ class TransferSuccess extends TransferResult {
 }
 
 /// Represents a failed transfer.
-class TransferFailure extends TransferResult {
+class TransferError extends TransferResult {
   /// The error message.
   final String message;
 
@@ -98,7 +98,7 @@ class TransferFailure extends TransferResult {
   /// Additional error details.
   final Map<String, dynamic>? details;
 
-  const TransferFailure({
+  const TransferError({
     required this.message,
     this.code,
     this.exception,
@@ -110,12 +110,12 @@ class TransferFailure extends TransferResult {
   });
 
   /// Creates a failure from a network error.
-  factory TransferFailure.network({
+  factory TransferError.network({
     String message = 'Network error occurred',
     Object? exception,
     StackTrace? stackTrace,
   }) {
-    return TransferFailure(
+    return TransferError(
       message: message,
       code: 'NETWORK_ERROR',
       exception: exception,
@@ -125,11 +125,11 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure from a timeout.
-  factory TransferFailure.timeout({
+  factory TransferError.timeout({
     String message = 'Transfer timed out',
     int? bytesTransferred,
   }) {
-    return TransferFailure(
+    return TransferError(
       message: message,
       code: 'TIMEOUT',
       isRecoverable: true,
@@ -138,12 +138,12 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure from a server error.
-  factory TransferFailure.server({
+  factory TransferError.server({
     required int statusCode,
     String? message,
     dynamic responseBody,
   }) {
-    return TransferFailure(
+    return TransferError(
       message: message ?? 'Server error: $statusCode',
       code: 'SERVER_ERROR',
       httpStatusCode: statusCode,
@@ -153,11 +153,11 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure from a file error.
-  factory TransferFailure.file({
+  factory TransferError.file({
     required String message,
     Object? exception,
   }) {
-    return TransferFailure(
+    return TransferError(
       message: message,
       code: 'FILE_ERROR',
       exception: exception,
@@ -166,11 +166,11 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure from insufficient storage.
-  factory TransferFailure.insufficientStorage({
+  factory TransferError.insufficientStorage({
     int? requiredBytes,
     int? availableBytes,
   }) {
-    return TransferFailure(
+    return TransferError(
       message: 'Insufficient storage space',
       code: 'INSUFFICIENT_STORAGE',
       isRecoverable: false,
@@ -182,10 +182,10 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure from an authentication error.
-  factory TransferFailure.unauthorized({
+  factory TransferError.unauthorized({
     String message = 'Authentication required',
   }) {
-    return TransferFailure(
+    return TransferError(
       message: message,
       code: 'UNAUTHORIZED',
       httpStatusCode: 401,
@@ -194,10 +194,10 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure from a permission error.
-  factory TransferFailure.forbidden({
+  factory TransferError.forbidden({
     String message = 'Permission denied',
   }) {
-    return TransferFailure(
+    return TransferError(
       message: message,
       code: 'FORBIDDEN',
       httpStatusCode: 403,
@@ -206,10 +206,10 @@ class TransferFailure extends TransferResult {
   }
 
   /// Creates a failure for file not found.
-  factory TransferFailure.notFound({
+  factory TransferError.notFound({
     String? url,
   }) {
-    return TransferFailure(
+    return TransferError(
       message: url != null ? 'File not found: $url' : 'File not found',
       code: 'NOT_FOUND',
       httpStatusCode: 404,
@@ -219,7 +219,7 @@ class TransferFailure extends TransferResult {
 
   @override
   String toString() {
-    return 'TransferFailure(message: $message, code: $code, '
+    return 'TransferError(message: $message, code: $code, '
         'isRecoverable: $isRecoverable)';
   }
 }
@@ -253,12 +253,12 @@ extension TransferResultExtensions on TransferResult {
   /// Maps the result to a value based on its type.
   T when<T>({
     required T Function(TransferSuccess success) success,
-    required T Function(TransferFailure failure) failure,
+    required T Function(TransferError error) error,
     required T Function(TransferCancelled cancelled) cancelled,
   }) {
     return switch (this) {
       TransferSuccess s => success(s),
-      TransferFailure f => failure(f),
+      TransferError e => error(e),
       TransferCancelled c => cancelled(c),
     };
   }
@@ -278,8 +278,8 @@ extension TransferResultExtensions on TransferResult {
 
   /// Gets the error message if failed, null otherwise.
   String? get errorMessageOrNull {
-    if (this is TransferFailure) {
-      return (this as TransferFailure).message;
+    if (this is TransferError) {
+      return (this as TransferError).message;
     }
     return null;
   }
@@ -288,7 +288,7 @@ extension TransferResultExtensions on TransferResult {
   TransferSuccess getOrThrow() {
     return switch (this) {
       TransferSuccess s => s,
-      TransferFailure f => throw TransferException(f.message, f.code),
+      TransferError e => throw TransferException(e.message, e.code),
       TransferCancelled c =>
         throw TransferCancelledException(c.reason ?? 'Transfer cancelled'),
     };
