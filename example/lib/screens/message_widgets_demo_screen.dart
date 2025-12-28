@@ -22,12 +22,10 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
     'image_medium': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
     'image_large': 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200',
     'image_portrait': 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600',
-    'image_square': 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=500',
 
     // Thumbnails
     'thumb_1': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100',
     'thumb_2': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=100',
-    'thumb_3': 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=100',
 
     // Videos
     'video_1mb': 'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
@@ -107,21 +105,11 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             width: 280,
             height: 200,
             caption: 'منظر طبيعي رائع!',
-            direction: MessageDirection.outgoing,
+            showCaption: true,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
 
@@ -135,21 +123,10 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             thumbnailUrl: _mediaUrls['thumb_1'],
             width: 250,
             height: 180,
-            direction: MessageDirection.incoming,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
 
@@ -162,20 +139,9 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             url: _mediaUrls['image_portrait']!,
             width: 200,
             height: 300,
-            direction: MessageDirection.outgoing,
             config: const TransferWidgetConfig(
               autoStart: false,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'portrait_${DateTime.now().millisecondsSinceEpoch}.jpg',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
       ],
@@ -194,21 +160,10 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             width: 280,
             height: 160,
             duration: const Duration(minutes: 1, seconds: 30),
-            direction: MessageDirection.outgoing,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'video_${DateTime.now().millisecondsSinceEpoch}.mp4',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
 
@@ -224,20 +179,9 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             height: 180,
             duration: const Duration(minutes: 5, seconds: 45),
             hasAudio: true,
-            direction: MessageDirection.incoming,
             config: const TransferWidgetConfig(
               autoStart: false,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'video_${DateTime.now().millisecondsSinceEpoch}.mp4',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
       ],
@@ -253,22 +197,11 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
           child: AudioMessageTransferWidget(
             url: _mediaUrls['audio_mp3']!,
             duration: const Duration(seconds: 45),
-            direction: MessageDirection.outgoing,
-            waveformData: _generateWaveform(30),
+            waveform: _generateWaveform(30),
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
 
@@ -280,21 +213,10 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
           child: AudioMessageTransferWidget(
             url: _mediaUrls['audio_mp3']!,
             duration: const Duration(minutes: 2, seconds: 30),
-            direction: MessageDirection.incoming,
-            waveformData: _generateWaveform(40),
+            waveform: _generateWaveform(40),
             config: const TransferWidgetConfig(
               autoStart: false,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
       ],
@@ -311,22 +233,11 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             url: 'https://sample-videos.com/zip/1mb.zip',
             fileName: 'مشروع_البرمجة.zip',
             fileSize: 1024 * 1024,
-            direction: MessageDirection.outgoing,
-            fileExtension: 'ZIP',
+            extension: 'ZIP',
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'project_${DateTime.now().millisecondsSinceEpoch}.zip',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
 
@@ -339,22 +250,11 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             url: _mediaUrls['pdf_small']!,
             fileName: 'تقرير_المبيعات.xlsx',
             fileSize: 512 * 1024,
-            direction: MessageDirection.incoming,
-            fileExtension: 'XLSX',
+            extension: 'XLSX',
             iconColor: Colors.green,
             config: const TransferWidgetConfig(
               autoStart: false,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'report_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
       ],
@@ -372,21 +272,10 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             fileName: 'عقد_العمل.pdf',
             fileSize: 150 * 1024,
             pageCount: 5,
-            direction: MessageDirection.outgoing,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'contract_${DateTime.now().millisecondsSinceEpoch}.pdf',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
 
@@ -400,20 +289,9 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             fileName: 'دليل_المستخدم.pdf',
             fileSize: 5 * 1024 * 1024,
             pageCount: 120,
-            direction: MessageDirection.incoming,
             config: const TransferWidgetConfig(
               autoStart: false,
             ),
-            onDownload: (payload) async* {
-              yield* TransferController.instance.download(
-                url: payload.url,
-                fileName: 'manual_${DateTime.now().millisecondsSinceEpoch}.pdf',
-              ).map((e) => TransferProgress(
-                bytesTransferred: e.transferredBytes ?? 0,
-                totalBytes: e.expectedSize ?? -1,
-                status: _mapStatus(e.status),
-              ));
-            },
           ),
         ),
       ],
@@ -438,22 +316,5 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
       final base = ((i + random) % 10) / 10;
       return 0.2 + base * 0.8;
     });
-  }
-
-  TransferStatus _mapStatus(TransferEntityStatus status) {
-    switch (status) {
-      case TransferEntityStatus.pending:
-        return TransferStatus.pending;
-      case TransferEntityStatus.running:
-        return TransferStatus.running;
-      case TransferEntityStatus.paused:
-        return TransferStatus.paused;
-      case TransferEntityStatus.complete:
-        return TransferStatus.completed;
-      case TransferEntityStatus.failed:
-        return TransferStatus.failed;
-      case TransferEntityStatus.canceled:
-        return TransferStatus.cancelled;
-    }
   }
 }

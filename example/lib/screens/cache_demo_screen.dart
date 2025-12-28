@@ -28,16 +28,15 @@ class _CacheDemoScreenState extends State<CacheDemoScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final transfers = await _controller.getAllTransfers();
+      final result = await _controller.getAllTransfers();
+      final transfers = result.valueOrNull ?? [];
       final completed = transfers.where((t) => t.isComplete).toList();
 
       int totalSize = 0;
       for (final transfer in completed) {
-        if (transfer.filePath != null) {
-          final file = File(transfer.filePath!);
-          if (await file.exists()) {
-            totalSize += await file.length();
-          }
+        final file = File(transfer.filePath);
+        if (await file.exists()) {
+          totalSize += await file.length();
         }
       }
 
@@ -73,11 +72,9 @@ class _CacheDemoScreenState extends State<CacheDemoScreen> {
 
     if (confirm == true) {
       for (final transfer in _cachedTransfers) {
-        if (transfer.filePath != null) {
-          final file = File(transfer.filePath!);
-          if (await file.exists()) {
-            await file.delete();
-          }
+        final file = File(transfer.filePath);
+        if (await file.exists()) {
+          await file.delete();
         }
         await _controller.deleteTransfer(transfer.id);
       }
@@ -86,11 +83,9 @@ class _CacheDemoScreenState extends State<CacheDemoScreen> {
   }
 
   Future<void> _deleteItem(TransferEntity transfer) async {
-    if (transfer.filePath != null) {
-      final file = File(transfer.filePath!);
-      if (await file.exists()) {
-        await file.delete();
-      }
+    final file = File(transfer.filePath);
+    if (await file.exists()) {
+      await file.delete();
     }
     await _controller.deleteTransfer(transfer.id);
     await _loadCacheData();
@@ -265,7 +260,8 @@ class _CacheDemoScreenState extends State<CacheDemoScreen> {
     // Group by file type
     final grouped = <String, List<TransferEntity>>{};
     for (final transfer in _cachedTransfers) {
-      final ext = transfer.fileName?.split('.').last.toUpperCase() ?? 'OTHER';
+      final parts = transfer.fileName.split('.');
+      final ext = parts.length > 1 ? parts.last.toUpperCase() : 'OTHER';
       grouped.putIfAbsent(ext, () => []).add(transfer);
     }
 
@@ -305,6 +301,9 @@ class _CacheDemoScreenState extends State<CacheDemoScreen> {
   }
 
   Widget _buildCacheItem(TransferEntity transfer) {
+    final parts = transfer.fileName.split('.');
+    final fileType = parts.length > 1 ? parts.last.toUpperCase() : 'OTHER';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -312,30 +311,24 @@ class _CacheDemoScreenState extends State<CacheDemoScreen> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: _getTypeColor(
-              transfer.fileName?.split('.').last.toUpperCase() ?? 'OTHER',
-            ).withOpacity(0.1),
+            color: _getTypeColor(fileType).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
-            _getTypeIcon(
-              transfer.fileName?.split('.').last.toUpperCase() ?? 'OTHER',
-            ),
-            color: _getTypeColor(
-              transfer.fileName?.split('.').last.toUpperCase() ?? 'OTHER',
-            ),
+            _getTypeIcon(fileType),
+            color: _getTypeColor(fileType),
           ),
         ),
         title: Text(
-          transfer.fileName ?? 'ملف غير معروف',
+          transfer.fileName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Row(
           children: [
             Text(
-              transfer.expectedSize != null
-                  ? _formatSize(transfer.expectedSize!)
+              transfer.expectedSize > 0
+                  ? _formatSize(transfer.expectedSize)
                   : 'غير معروف',
               style: const TextStyle(fontSize: 12),
             ),

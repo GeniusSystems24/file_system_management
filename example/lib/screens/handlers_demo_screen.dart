@@ -50,7 +50,7 @@ class _HandlersDemoScreenState extends State<HandlersDemoScreen> {
 
       await for (final progress in stream) {
         setState(() => _progress = progress);
-        _addLog('التقدم: ${(progress.progressPercent * 100).toStringAsFixed(1)}%');
+        _addLog('التقدم: ${progress.progressText}');
 
         if (progress.isCompleted) {
           setState(() {
@@ -103,7 +103,7 @@ class _HandlersDemoScreenState extends State<HandlersDemoScreen> {
 
       await for (final progress in stream) {
         setState(() => _progress = progress);
-        _addLog('التقدم: ${(progress.progressPercent * 100).toStringAsFixed(1)}%');
+        _addLog('التقدم: ${progress.progressText}');
 
         if (progress.isCompleted) {
           setState(() {
@@ -283,7 +283,7 @@ class _HandlersDemoScreenState extends State<HandlersDemoScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: progress.progressPercent,
+                        value: progress.progress,
                         minHeight: 12,
                         backgroundColor: Colors.grey.shade200,
                       ),
@@ -291,7 +291,7 @@ class _HandlersDemoScreenState extends State<HandlersDemoScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    '${(progress.progressPercent * 100).toStringAsFixed(1)}%',
+                    progress.progressText,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -300,10 +300,10 @@ class _HandlersDemoScreenState extends State<HandlersDemoScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildProgressInfo('المنقول', progress.bytesTransferredFormatted),
-                  _buildProgressInfo('الإجمالي', progress.totalBytesFormatted),
-                  _buildProgressInfo('السرعة', progress.speedFormatted),
-                  _buildProgressInfo('المتبقي', progress.etaFormatted),
+                  _buildProgressInfo('المنقول', progress.bytesTransferredText),
+                  _buildProgressInfo('الإجمالي', progress.totalBytesText),
+                  _buildProgressInfo('السرعة', progress.speedText),
+                  _buildProgressInfo('المتبقي', progress.etaText),
                 ],
               ),
               const SizedBox(height: 12),
@@ -338,6 +338,7 @@ class _HandlersDemoScreenState extends State<HandlersDemoScreen> {
       TransferStatus.completed => (Colors.green, Icons.check_circle, 'مكتمل'),
       TransferStatus.failed => (Colors.red, Icons.error, 'فشل'),
       TransferStatus.cancelled => (Colors.grey, Icons.cancel, 'ملغي'),
+      TransferStatus.waitingToRetry => (Colors.orange, Icons.refresh, 'إعادة المحاولة'),
     };
 
     return Container(

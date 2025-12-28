@@ -148,7 +148,8 @@ class _DownloadsDemoScreenState extends State<DownloadsDemoScreen>
   }
 
   Future<void> _loadTransfers() async {
-    final transfers = await _controller.getAllTransfers();
+    final result = await _controller.getAllTransfers();
+    final transfers = result.valueOrNull ?? [];
     setState(() => _transfers = transfers);
   }
 
@@ -284,7 +285,8 @@ class _DownloadCardState extends State<_DownloadCard> {
   }
 
   Future<void> _checkExistingTransfer() async {
-    final transfers = await widget.controller.getAllTransfers();
+    final result = await widget.controller.getAllTransfers();
+    final transfers = result.valueOrNull ?? [];
     final existing = transfers.where((t) => t.url == widget.file.url).firstOrNull;
     if (mounted) {
       setState(() => _transfer = existing);
@@ -295,14 +297,17 @@ class _DownloadCardState extends State<_DownloadCard> {
     setState(() => _isLoading = true);
 
     try {
-      final stream = widget.controller.download(
+      final result = await widget.controller.download(
         url: widget.file.url,
         fileName: widget.file.url.split('/').last,
       );
 
-      await for (final entity in stream) {
-        if (mounted) {
-          setState(() => _transfer = entity);
+      final stream = result.valueOrNull;
+      if (stream != null) {
+        await for (final entity in stream) {
+          if (mounted) {
+            setState(() => _transfer = entity);
+          }
         }
       }
     } finally {
@@ -322,12 +327,8 @@ class _DownloadCardState extends State<_DownloadCard> {
 
   Future<void> _resumeDownload() async {
     if (_transfer != null) {
-      final stream = widget.controller.resume(_transfer!.id);
-      await for (final entity in stream) {
-        if (mounted) {
-          setState(() => _transfer = entity);
-        }
-      }
+      await widget.controller.resume(_transfer!.id);
+      _checkExistingTransfer();
     }
   }
 
@@ -341,10 +342,13 @@ class _DownloadCardState extends State<_DownloadCard> {
 
   Future<void> _retryDownload() async {
     if (_transfer != null) {
-      final stream = widget.controller.retry(_transfer!.id);
-      await for (final entity in stream) {
-        if (mounted) {
-          setState(() => _transfer = entity);
+      final result = await widget.controller.retry(_transfer!.id);
+      final stream = result.valueOrNull;
+      if (stream != null) {
+        await for (final entity in stream) {
+          if (mounted) {
+            setState(() => _transfer = entity);
+          }
         }
       }
     }

@@ -107,12 +107,12 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colors.outgoingBubbleColor,
-                  borderRadius: BorderRadius.circular(theme.shapes.bubbleRadius),
+                  color: theme.outgoingBubbleColor,
+                  borderRadius: theme.outgoingBubbleBorderRadius,
                 ),
                 child: Text(
                   'رسالة صادرة',
-                  style: TextStyle(color: theme.colors.outgoingTextColor),
+                  style: TextStyle(color: theme.textColor),
                 ),
               ),
             ),
@@ -124,12 +124,12 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colors.incomingBubbleColor,
-                  borderRadius: BorderRadius.circular(theme.shapes.bubbleRadius),
+                  color: theme.incomingBubbleColor,
+                  borderRadius: theme.incomingBubbleBorderRadius,
                 ),
                 child: Text(
                   'رسالة واردة',
-                  style: TextStyle(color: theme.colors.incomingTextColor),
+                  style: TextStyle(color: theme.textColor),
                 ),
               ),
             ),
@@ -141,8 +141,8 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
                 Expanded(
                   child: LinearProgressIndicator(
                     value: 0.65,
-                    backgroundColor: theme.colors.progressBackgroundColor,
-                    valueColor: AlwaysStoppedAnimation(theme.colors.progressColor),
+                    backgroundColor: theme.progressBackgroundColor,
+                    valueColor: AlwaysStoppedAnimation(theme.progressForegroundColor),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -160,7 +160,7 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
                   icon: const Icon(Icons.download),
                   label: const Text('تحميل'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colors.primaryColor,
+                    backgroundColor: theme.primaryColor,
                   ),
                 ),
                 ElevatedButton.icon(
@@ -168,7 +168,7 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
                   icon: const Icon(Icons.check),
                   label: const Text('نجاح'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colors.successColor,
+                    backgroundColor: theme.successColor,
                   ),
                 ),
                 ElevatedButton.icon(
@@ -176,7 +176,7 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
                   icon: const Icon(Icons.error),
                   label: const Text('خطأ'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colors.errorColor,
+                    backgroundColor: theme.errorColor,
                   ),
                 ),
               ],
@@ -205,15 +205,15 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildColorChip('الرئيسي', theme.colors.primaryColor),
-                _buildColorChip('الثانوي', theme.colors.secondaryColor),
-                _buildColorChip('التقدم', theme.colors.progressColor),
-                _buildColorChip('النجاح', theme.colors.successColor),
-                _buildColorChip('الخطأ', theme.colors.errorColor),
-                _buildColorChip('التحذير', theme.colors.warningColor),
-                _buildColorChip('الإيقاف', theme.colors.pausedColor),
-                _buildColorChip('فقاعة صادرة', theme.colors.outgoingBubbleColor),
-                _buildColorChip('فقاعة واردة', theme.colors.incomingBubbleColor),
+                _buildColorChip('الرئيسي', theme.primaryColor),
+                _buildColorChip('الثانوي', theme.secondaryColor),
+                _buildColorChip('التقدم', theme.progressForegroundColor),
+                _buildColorChip('النجاح', theme.successColor),
+                _buildColorChip('الخطأ', theme.errorColor),
+                _buildColorChip('التحذير', theme.warningColor),
+                _buildColorChip('الإيقاف', theme.pausedColor),
+                _buildColorChip('فقاعة صادرة', theme.outgoingBubbleColor),
+                _buildColorChip('فقاعة واردة', theme.incomingBubbleColor),
               ],
             ),
           ],
@@ -285,10 +285,10 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildStatusBadge('جاري', theme.colors.progressColor, Icons.downloading),
-                _buildStatusBadge('متوقف', theme.colors.pausedColor, Icons.pause_circle),
-                _buildStatusBadge('مكتمل', theme.colors.successColor, Icons.check_circle),
-                _buildStatusBadge('فشل', theme.colors.errorColor, Icons.error),
+                _buildStatusBadge('جاري', theme.progressForegroundColor, Icons.downloading),
+                _buildStatusBadge('متوقف', theme.pausedColor, Icons.pause_circle),
+                _buildStatusBadge('مكتمل', theme.successColor, Icons.check_circle),
+                _buildStatusBadge('فشل', theme.errorColor, Icons.error),
                 _buildStatusBadge('ملغي', Colors.grey, Icons.cancel),
               ],
             ),
@@ -299,7 +299,7 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
   }
 
   Widget _buildProgressSample(SocialTransferThemeData theme, double value, String label) {
-    final color = value >= 1.0 ? theme.colors.successColor : theme.colors.progressColor;
+    final color = value >= 1.0 ? theme.successColor : theme.progressForegroundColor;
 
     return Column(
       children: [
@@ -312,7 +312,7 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
               CircularProgressIndicator(
                 value: value,
                 strokeWidth: 4,
-                backgroundColor: theme.colors.progressBackgroundColor,
+                backgroundColor: theme.progressBackgroundColor,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
               if (value >= 1.0)
@@ -366,22 +366,26 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
       SocialSkin.telegram => SocialTransferThemeData.telegram(isDark: _isDarkMode),
       SocialSkin.instagram => SocialTransferThemeData.instagram(isDark: _isDarkMode),
       SocialSkin.custom => SocialTransferThemeData(
-        colors: SocialTransferColors(
-          primaryColor: Colors.purple,
-          secondaryColor: Colors.purpleAccent,
-          progressColor: Colors.purple,
-          progressBackgroundColor: Colors.purple.shade100,
-          successColor: Colors.green,
-          errorColor: Colors.red,
-          warningColor: Colors.orange,
-          pausedColor: Colors.amber,
-          outgoingBubbleColor: _isDarkMode ? Colors.purple.shade800 : Colors.purple.shade100,
-          incomingBubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
-          outgoingTextColor: _isDarkMode ? Colors.white : Colors.black87,
-          incomingTextColor: _isDarkMode ? Colors.white : Colors.black87,
-          iconColor: Colors.purple,
-          secondaryIconColor: Colors.grey,
-        ),
+        skin: SocialSkin.custom,
+        primaryColor: Colors.purple,
+        secondaryColor: Colors.purpleAccent,
+        bubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+        outgoingBubbleColor: _isDarkMode ? Colors.purple.shade800 : Colors.purple.shade100,
+        incomingBubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+        progressBackgroundColor: Colors.purple.shade100,
+        progressForegroundColor: Colors.purple,
+        successColor: Colors.green,
+        errorColor: Colors.red,
+        warningColor: Colors.orange,
+        pausedColor: Colors.amber,
+        textColor: _isDarkMode ? Colors.white : Colors.black87,
+        subtitleColor: _isDarkMode ? Colors.white70 : Colors.black54,
+        iconColor: Colors.purple,
+        overlayColor: Colors.black38,
+        bubbleBorderRadius: BorderRadius.circular(12),
+        progressBorderRadius: BorderRadius.circular(4),
+        buttonBorderRadius: BorderRadius.circular(20),
+        thumbnailBorderRadius: BorderRadius.circular(8),
       ),
     };
   }
