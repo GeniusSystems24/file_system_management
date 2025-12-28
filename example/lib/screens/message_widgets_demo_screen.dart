@@ -1,0 +1,459 @@
+import 'package:file_system_management/file_system_management.dart';
+import 'package:flutter/material.dart';
+
+/// Demo screen showing all message transfer widgets with real content.
+class MessageWidgetsDemoScreen extends StatefulWidget {
+  final SocialSkin currentSkin;
+
+  const MessageWidgetsDemoScreen({
+    super.key,
+    required this.currentSkin,
+  });
+
+  @override
+  State<MessageWidgetsDemoScreen> createState() => _MessageWidgetsDemoScreenState();
+}
+
+class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
+  // Real URLs for different media types
+  static const _mediaUrls = {
+    // Images
+    'image_small': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
+    'image_medium': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
+    'image_large': 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200',
+    'image_portrait': 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600',
+    'image_square': 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=500',
+
+    // Thumbnails
+    'thumb_1': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100',
+    'thumb_2': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=100',
+    'thumb_3': 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=100',
+
+    // Videos
+    'video_1mb': 'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
+    'video_5mb': 'https://sample-videos.com/video321/mp4/360/big_buck_bunny_360p_5mb.mp4',
+
+    // Audio
+    'audio_mp3': 'https://sample-videos.com/audio/mp3/crowd-cheering.mp3',
+
+    // Documents
+    'pdf_small': 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
+    'pdf_large': 'https://sample-videos.com/pdf/Sample-pdf-5mb.pdf',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ويدجت الرسائل'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildSectionHeader('رسائل الصور', Icons.image),
+          const SizedBox(height: 8),
+          _buildImageMessages(),
+
+          const SizedBox(height: 24),
+          _buildSectionHeader('رسائل الفيديو', Icons.videocam),
+          const SizedBox(height: 8),
+          _buildVideoMessages(),
+
+          const SizedBox(height: 24),
+          _buildSectionHeader('رسائل الصوت', Icons.audiotrack),
+          const SizedBox(height: 8),
+          _buildAudioMessages(),
+
+          const SizedBox(height: 24),
+          _buildSectionHeader('رسائل الملفات', Icons.insert_drive_file),
+          const SizedBox(height: 8),
+          _buildFileMessages(),
+
+          const SizedBox(height: 24),
+          _buildSectionHeader('رسائل المستندات', Icons.description),
+          const SizedBox(height: 8),
+          _buildDocumentMessages(),
+
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageMessages() {
+    return Column(
+      children: [
+        // Outgoing image with caption
+        _buildMessageRow(
+          isOutgoing: true,
+          child: ImageMessageTransferWidget(
+            url: _mediaUrls['image_medium']!,
+            thumbnailUrl: _mediaUrls['thumb_2'],
+            width: 280,
+            height: 200,
+            caption: 'منظر طبيعي رائع!',
+            direction: MessageDirection.outgoing,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Incoming image
+        _buildMessageRow(
+          isOutgoing: false,
+          child: ImageMessageTransferWidget(
+            url: _mediaUrls['image_small']!,
+            thumbnailUrl: _mediaUrls['thumb_1'],
+            width: 250,
+            height: 180,
+            direction: MessageDirection.incoming,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Portrait image
+        _buildMessageRow(
+          isOutgoing: true,
+          child: ImageMessageTransferWidget(
+            url: _mediaUrls['image_portrait']!,
+            width: 200,
+            height: 300,
+            direction: MessageDirection.outgoing,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'portrait_${DateTime.now().millisecondsSinceEpoch}.jpg',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVideoMessages() {
+    return Column(
+      children: [
+        // Outgoing video
+        _buildMessageRow(
+          isOutgoing: true,
+          child: VideoMessageTransferWidget(
+            url: _mediaUrls['video_1mb']!,
+            thumbnailUrl: _mediaUrls['thumb_1'],
+            width: 280,
+            height: 160,
+            duration: const Duration(minutes: 1, seconds: 30),
+            direction: MessageDirection.outgoing,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'video_${DateTime.now().millisecondsSinceEpoch}.mp4',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Incoming video (larger)
+        _buildMessageRow(
+          isOutgoing: false,
+          child: VideoMessageTransferWidget(
+            url: _mediaUrls['video_5mb']!,
+            thumbnailUrl: _mediaUrls['thumb_2'],
+            width: 260,
+            height: 180,
+            duration: const Duration(minutes: 5, seconds: 45),
+            hasAudio: true,
+            direction: MessageDirection.incoming,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'video_${DateTime.now().millisecondsSinceEpoch}.mp4',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAudioMessages() {
+    return Column(
+      children: [
+        // Outgoing audio
+        _buildMessageRow(
+          isOutgoing: true,
+          child: AudioMessageTransferWidget(
+            url: _mediaUrls['audio_mp3']!,
+            duration: const Duration(seconds: 45),
+            direction: MessageDirection.outgoing,
+            waveformData: _generateWaveform(30),
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Incoming audio
+        _buildMessageRow(
+          isOutgoing: false,
+          child: AudioMessageTransferWidget(
+            url: _mediaUrls['audio_mp3']!,
+            duration: const Duration(minutes: 2, seconds: 30),
+            direction: MessageDirection.incoming,
+            waveformData: _generateWaveform(40),
+            config: const TransferWidgetConfig(
+              autoStart: false,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFileMessages() {
+    return Column(
+      children: [
+        // Outgoing ZIP file
+        _buildMessageRow(
+          isOutgoing: true,
+          child: FileMessageTransferWidget(
+            url: 'https://sample-videos.com/zip/1mb.zip',
+            fileName: 'مشروع_البرمجة.zip',
+            fileSize: 1024 * 1024,
+            direction: MessageDirection.outgoing,
+            fileExtension: 'ZIP',
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'project_${DateTime.now().millisecondsSinceEpoch}.zip',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Incoming Excel file
+        _buildMessageRow(
+          isOutgoing: false,
+          child: FileMessageTransferWidget(
+            url: _mediaUrls['pdf_small']!,
+            fileName: 'تقرير_المبيعات.xlsx',
+            fileSize: 512 * 1024,
+            direction: MessageDirection.incoming,
+            fileExtension: 'XLSX',
+            iconColor: Colors.green,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'report_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDocumentMessages() {
+    return Column(
+      children: [
+        // Outgoing PDF
+        _buildMessageRow(
+          isOutgoing: true,
+          child: DocumentMessageTransferWidget(
+            url: _mediaUrls['pdf_small']!,
+            fileName: 'عقد_العمل.pdf',
+            fileSize: 150 * 1024,
+            pageCount: 5,
+            direction: MessageDirection.outgoing,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'contract_${DateTime.now().millisecondsSinceEpoch}.pdf',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        // Incoming large PDF
+        _buildMessageRow(
+          isOutgoing: false,
+          child: DocumentMessageTransferWidget(
+            url: _mediaUrls['pdf_large']!,
+            fileName: 'دليل_المستخدم.pdf',
+            fileSize: 5 * 1024 * 1024,
+            pageCount: 120,
+            direction: MessageDirection.incoming,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+            ),
+            onDownload: (payload) async* {
+              yield* TransferController.instance.download(
+                url: payload.url,
+                fileName: 'manual_${DateTime.now().millisecondsSinceEpoch}.pdf',
+              ).map((e) => TransferProgress(
+                bytesTransferred: e.transferredBytes ?? 0,
+                totalBytes: e.expectedSize ?? -1,
+                status: _mapStatus(e.status),
+              ));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessageRow({required bool isOutgoing, required Widget child}) {
+    return Align(
+      alignment: isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.8,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  List<double> _generateWaveform(int count) {
+    final random = DateTime.now().millisecond;
+    return List.generate(count, (i) {
+      final base = ((i + random) % 10) / 10;
+      return 0.2 + base * 0.8;
+    });
+  }
+
+  TransferStatus _mapStatus(TransferEntityStatus status) {
+    switch (status) {
+      case TransferEntityStatus.pending:
+        return TransferStatus.pending;
+      case TransferEntityStatus.running:
+        return TransferStatus.running;
+      case TransferEntityStatus.paused:
+        return TransferStatus.paused;
+      case TransferEntityStatus.complete:
+        return TransferStatus.completed;
+      case TransferEntityStatus.failed:
+        return TransferStatus.failed;
+      case TransferEntityStatus.canceled:
+        return TransferStatus.cancelled;
+    }
+  }
+}
