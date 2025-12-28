@@ -2,8 +2,6 @@ import 'dart:async';
 
 import 'package:background_downloader/background_downloader.dart';
 
-import '../models/models.dart';
-
 /// Data source for the background_downloader package.
 ///
 /// This class wraps all interactions with the background_downloader package.
@@ -18,13 +16,13 @@ class DownloaderDataSource {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// Configures the downloader.
-  Future<void> configure({
-    List<(Config, Object)>? globalConfig,
-    List<(Config, Object)>? androidConfig,
-    List<(Config, Object)>? iOSConfig,
-    List<(Config, Object)>? desktopConfig,
+  Future<List<(String, String)>> configure({
+    dynamic globalConfig,
+    dynamic androidConfig,
+    dynamic iOSConfig,
+    dynamic desktopConfig,
   }) async {
-    await _downloader.configure(
+    return await _downloader.configure(
       globalConfig: globalConfig,
       androidConfig: androidConfig,
       iOSConfig: iOSConfig,
@@ -120,23 +118,13 @@ class DownloaderDataSource {
   Future<bool> cancelTasksWithIds(List<String> taskIds) =>
       _downloader.cancelTasksWithIds(taskIds);
 
-  /// Holds a task.
-  Future<bool> hold(Task task) => _downloader.hold(task);
-
-  /// Releases a task.
-  Future<bool> release(Task task) => _downloader.release(task);
-
-  /// Releases all held tasks.
-  Future<bool> releaseHeldTasks({required String group}) =>
-      _downloader.releaseHeldTasks(group: group);
-
   // ═══════════════════════════════════════════════════════════════════════════
   // QUERY OPERATIONS
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// Gets all tasks.
   Future<List<Task>> allTasks({String? group}) =>
-      _downloader.allTasks(group: group);
+      _downloader.allTasks(group: group ?? FileDownloader.defaultGroup);
 
   /// Gets a task by ID.
   Future<Task?> taskForId(String taskId) => _downloader.taskForId(taskId);
@@ -164,8 +152,12 @@ class DownloaderDataSource {
   Future<void> deleteAllRecords() => _downloader.database.deleteAllRecords();
 
   /// Deletes records by status.
-  Future<void> deleteRecordsWithStatus(TaskStatus status) =>
-      _downloader.database.deleteRecordsWithStatus(status);
+  Future<void> deleteRecordsWithStatus(TaskStatus status) async {
+    final records = await _downloader.database.allRecordsWithStatus(status);
+
+    await _downloader.database
+        .deleteRecordsWithIds(records.map((e) => e.taskId).toList());
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // FILE OPERATIONS
@@ -190,31 +182,23 @@ class DownloaderDataSource {
     );
   }
 
-  /// Checks if path is in shared storage.
-  Future<SharedStorage?> pathInSharedStorage(String path) =>
-      _downloader.pathInSharedStorage(path);
+  /// Gets path in shared storage.
+  Future<String?> pathInSharedStorage(
+    String filePath,
+    SharedStorage destination, {
+    String directory = '',
+  }) {
+    return _downloader.pathInSharedStorage(filePath, destination,
+        directory: directory);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // UTILITY OPERATIONS
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// Gets available space.
-  Future<int?> availableSpace({
-    BaseDirectory baseDirectory = BaseDirectory.applicationDocuments,
-    String directory = '',
-  }) {
-    return _downloader.availableSpace(
-      baseDirectory: baseDirectory,
-      directory: directory,
-    );
-  }
-
-  /// Gets the permissions object.
-  Permissions get permissions => _downloader.permissions;
-
-  /// Reschedules missing tasks.
-  Future<(List<Task>, List<Task>)> rescheduleMissingTasks() =>
-      _downloader.rescheduleMissingTasks();
+  /// Reschedules killed tasks.
+  Future<(List<Task>, List<Task>)> rescheduleKilledTasks() =>
+      _downloader.rescheduleKilledTasks();
 
   /// Configures WiFi requirement.
   Future<bool> requireWiFi(

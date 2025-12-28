@@ -86,7 +86,7 @@ class CancelledFailure extends TransferFailure {
 class TimeoutFailure extends TransferFailure {
   final Duration timeout;
 
-  const TimeoutFailure({
+  TimeoutFailure({
     required this.timeout,
   }) : super(
           message: 'Transfer timed out after ${timeout.inSeconds}s',

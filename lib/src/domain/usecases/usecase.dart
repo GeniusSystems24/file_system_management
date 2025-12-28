@@ -1,4 +1,3 @@
-import '../failures/failures.dart';
 import '../repositories/transfer_repository.dart';
 
 /// Base class for all use cases.

@@ -1,4 +1,3 @@
-import '../failures/failures.dart';
 import 'transfer_repository.dart';
 
 /// Repository interface for cache operations.

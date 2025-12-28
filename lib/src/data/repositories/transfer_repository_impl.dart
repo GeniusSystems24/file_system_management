@@ -104,9 +104,13 @@ class TransferRepositoryImpl implements TransferRepository {
 
       _activeUrls.add(url);
 
+      // Combine primary URL with mirror URLs for parallel download
+      final urlList = mirrorUrls != null && mirrorUrls.isNotEmpty
+          ? [url, ...mirrorUrls]
+          : url;
+
       final task = ParallelDownloadTask(
-        url: url,
-        urls: mirrorUrls,
+        url: urlList,
         chunks: chunks,
         filename: fileName ?? _hashUrl(url),
         directory: directory ?? '',
@@ -567,7 +571,7 @@ class TransferRepositoryImpl implements TransferRepository {
   Future<Result<(List<TransferEntity>, List<TransferEntity>)>>
       rescheduleMissing() async {
     try {
-      final (succeeded, failed) = await _dataSource.rescheduleMissingTasks();
+      final (succeeded, failed) = await _dataSource.rescheduleKilledTasks();
       return Success((
         succeeded.map((t) => TransferModel.fromTask(t).toEntity()).toList(),
         failed.map((t) => TransferModel.fromTask(t).toEntity()).toList(),
