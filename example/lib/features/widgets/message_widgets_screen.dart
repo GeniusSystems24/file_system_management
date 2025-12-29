@@ -14,8 +14,6 @@ class MessageWidgetsScreen extends StatefulWidget {
 class _MessageWidgetsScreenState extends State<MessageWidgetsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  double _demoProgress = 0.45;
-  bool _isPlaying = false;
 
   @override
   void initState() {
@@ -46,43 +44,14 @@ class _MessageWidgetsScreenState extends State<MessageWidgetsScreen>
           ],
         ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Progress Slider
-          _buildProgressControl(),
-
-          // Tab Content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildImageTab(),
-                _buildVideoTab(),
-                _buildAudioTab(),
-                _buildFileTab(),
-                _buildArchiveTab(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressControl() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Row(
-        children: [
-          const Text('Progress: '),
-          Expanded(
-            child: Slider(
-              value: _demoProgress,
-              onChanged: (value) => setState(() => _demoProgress = value),
-            ),
-          ),
-          Text('${(_demoProgress * 100).toInt()}%'),
+          _buildImageTab(),
+          _buildVideoTab(),
+          _buildAudioTab(),
+          _buildFileTab(),
+          _buildArchiveTab(),
         ],
       ),
     );
@@ -102,54 +71,31 @@ class _MessageWidgetsScreenState extends State<MessageWidgetsScreen>
 
         // Demo widgets
         _buildDemoContainer(
-          'Downloading State',
+          'Image Message',
           ImageMessageTransferWidget(
+            url: 'https://picsum.photos/400/300',
             thumbnailUrl: 'https://picsum.photos/400/300',
             fileName: 'vacation_photo.jpg',
-            fileSize: 2.5 * 1024 * 1024,
-            progress: _demoProgress,
-            status: TransferStatus.running,
-            onTap: () {},
-            onCancel: () {},
+            fileSize: (2.5 * 1024 * 1024).toInt(),
+            width: 280,
+            height: 200,
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
-        const SizedBox(height: 16),
-
-        _buildDemoContainer(
-          'Completed State',
-          ImageMessageTransferWidget(
-            thumbnailUrl: 'https://picsum.photos/400/300',
-            fileName: 'sunset.jpg',
-            fileSize: 1.8 * 1024 * 1024,
-            progress: 1.0,
-            status: TransferStatus.completed,
-            onTap: () {},
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        _buildDemoContainer(
-          'Pending State',
-          ImageMessageTransferWidget(
-            thumbnailUrl: 'https://picsum.photos/400/300',
-            fileName: 'mountains.png',
-            fileSize: 3.2 * 1024 * 1024,
-            progress: 0.0,
-            status: TransferStatus.pending,
-            onTap: () {},
-          ),
-        ),
-
         const SizedBox(height: 24),
         _buildCodeSnippet('''
 ImageMessageTransferWidget(
+  url: 'https://example.com/image.jpg',
   thumbnailUrl: 'https://example.com/thumb.jpg',
   fileName: 'photo.jpg',
-  fileSize: 2.5 * 1024 * 1024,
-  progress: 0.45,
-  status: TransferStatus.running,
-  onTap: () => openImage(),
-  onCancel: () => cancelDownload(),
+  fileSize: 2500000,
+  width: 280,
+  height: 200,
+  onDownload: (payload) async* {
+    yield* controller.download(url: payload.url);
+  },
 )'''),
       ],
     );
@@ -168,43 +114,35 @@ ImageMessageTransferWidget(
         const SizedBox(height: 16),
 
         _buildDemoContainer(
-          'Downloading State',
+          'Video Message',
           VideoMessageTransferWidget(
+            url: 'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
             thumbnailUrl: 'https://picsum.photos/400/225',
             fileName: 'birthday_video.mp4',
             fileSize: 25 * 1024 * 1024,
             duration: const Duration(minutes: 3, seconds: 45),
-            progress: _demoProgress,
-            status: TransferStatus.running,
-            onTap: () {},
-            onCancel: () {},
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        _buildDemoContainer(
-          'Completed State',
-          VideoMessageTransferWidget(
-            thumbnailUrl: 'https://picsum.photos/400/225',
-            fileName: 'tutorial.mp4',
-            fileSize: 50 * 1024 * 1024,
-            duration: const Duration(minutes: 10, seconds: 30),
-            progress: 1.0,
-            status: TransferStatus.completed,
-            onTap: () {},
+            width: 280,
+            height: 180,
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
 
         const SizedBox(height: 24),
         _buildCodeSnippet('''
 VideoMessageTransferWidget(
+  url: 'https://example.com/video.mp4',
   thumbnailUrl: 'https://example.com/thumb.jpg',
   fileName: 'video.mp4',
-  fileSize: 25 * 1024 * 1024,
+  fileSize: 25000000,
   duration: Duration(minutes: 3, seconds: 45),
-  progress: 0.45,
-  status: TransferStatus.running,
-  onTap: () => playVideo(),
+  width: 280,
+  height: 180,
+  onPlay: (filePath) => openVideoPlayer(filePath),
+  onDownload: (payload) async* {
+    yield* controller.download(url: payload.url);
+  },
 )'''),
       ],
     );
@@ -223,49 +161,32 @@ VideoMessageTransferWidget(
         const SizedBox(height: 16),
 
         _buildDemoContainer(
-          'Downloading State',
+          'Audio Message',
           AudioMessageTransferWidget(
+            url: 'https://sample-videos.com/audio/mp3/crowd-cheering.mp3',
             fileName: 'voice_message.mp3',
             fileSize: 500 * 1024,
             duration: const Duration(seconds: 45),
             waveform: _generateWaveform(),
-            progress: _demoProgress,
-            status: TransferStatus.running,
-            isPlaying: false,
-            playbackProgress: 0,
-            onTap: () {},
-            onCancel: () {},
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        _buildDemoContainer(
-          'Playing State',
-          AudioMessageTransferWidget(
-            fileName: 'podcast.mp3',
-            fileSize: 5 * 1024 * 1024,
-            duration: const Duration(minutes: 5),
-            waveform: _generateWaveform(),
-            progress: 1.0,
-            status: TransferStatus.completed,
-            isPlaying: _isPlaying,
-            playbackProgress: 0.35,
-            onTap: () => setState(() => _isPlaying = !_isPlaying),
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
 
         const SizedBox(height: 24),
         _buildCodeSnippet('''
 AudioMessageTransferWidget(
+  url: 'https://example.com/audio.mp3',
   fileName: 'audio.mp3',
-  fileSize: 5 * 1024 * 1024,
+  fileSize: 5000000,
   duration: Duration(minutes: 5),
   waveform: [0.2, 0.5, 0.8, 0.3, ...],
-  progress: 1.0,
-  status: TransferStatus.completed,
-  isPlaying: true,
-  playbackProgress: 0.35,
-  onTap: () => togglePlay(),
+  isPlaying: false,
+  onPlay: () => playAudio(),
+  onDownload: (payload) async* {
+    yield* controller.download(url: payload.url);
+  },
 )'''),
       ],
     );
@@ -286,13 +207,13 @@ AudioMessageTransferWidget(
         _buildDemoContainer(
           'PDF Document',
           FileMessageTransferWidget(
+            url: 'https://example.com/report.pdf',
             fileName: 'project_report.pdf',
-            fileSize: 2.3 * 1024 * 1024,
+            fileSize: (2.3 * 1024 * 1024).toInt(),
             extension: 'pdf',
-            progress: _demoProgress,
-            status: TransferStatus.running,
-            onTap: () {},
-            onCancel: () {},
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
         const SizedBox(height: 16),
@@ -300,37 +221,26 @@ AudioMessageTransferWidget(
         _buildDemoContainer(
           'Spreadsheet',
           FileMessageTransferWidget(
+            url: 'https://example.com/budget.xlsx',
             fileName: 'budget_2024.xlsx',
-            fileSize: 1.5 * 1024 * 1024,
+            fileSize: (1.5 * 1024 * 1024).toInt(),
             extension: 'xlsx',
-            progress: 1.0,
-            status: TransferStatus.completed,
-            onTap: () {},
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        _buildDemoContainer(
-          'Presentation',
-          FileMessageTransferWidget(
-            fileName: 'quarterly_review.pptx',
-            fileSize: 8.7 * 1024 * 1024,
-            extension: 'pptx',
-            progress: 0.0,
-            status: TransferStatus.pending,
-            onTap: () {},
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
 
         const SizedBox(height: 24),
         _buildCodeSnippet('''
 FileMessageTransferWidget(
+  url: 'https://example.com/document.pdf',
   fileName: 'document.pdf',
-  fileSize: 2.3 * 1024 * 1024,
+  fileSize: 2300000,
   extension: 'pdf',
-  progress: 0.45,
-  status: TransferStatus.running,
-  onTap: () => openFile(),
+  onDownload: (payload) async* {
+    yield* controller.download(url: payload.url);
+  },
 )'''),
       ],
     );
@@ -351,38 +261,40 @@ FileMessageTransferWidget(
         _buildDemoContainer(
           'ZIP Archive',
           FileMessageTransferWidget(
+            url: 'https://sample-videos.com/zip/1mb.zip',
             fileName: 'photos_backup.zip',
             fileSize: 150 * 1024 * 1024,
             extension: 'zip',
-            progress: _demoProgress,
-            status: TransferStatus.running,
-            onTap: () {},
-            onCancel: () {},
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
         const SizedBox(height: 16),
 
         _buildDemoContainer(
-          'Completed Archive',
+          'RAR Archive',
           FileMessageTransferWidget(
+            url: 'https://example.com/project.rar',
             fileName: 'project_files.rar',
             fileSize: 45 * 1024 * 1024,
             extension: 'rar',
-            progress: 1.0,
-            status: TransferStatus.completed,
-            onTap: () {},
+            onDownload: (_) async* {
+              // Demo: Would yield TransferPayload updates
+            },
           ),
         ),
 
         const SizedBox(height: 24),
         _buildCodeSnippet('''
 FileMessageTransferWidget(
+  url: 'https://example.com/archive.zip',
   fileName: 'archive.zip',
-  fileSize: 150 * 1024 * 1024,
+  fileSize: 150000000,
   extension: 'zip',
-  progress: 0.45,
-  status: TransferStatus.running,
-  onTap: () => extractArchive(),
+  onDownload: (payload) async* {
+    yield* controller.download(url: payload.url);
+  },
 )'''),
       ],
     );

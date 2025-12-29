@@ -384,36 +384,36 @@ class _BatchDownloadsScreenState extends State<BatchDownloadsScreen> {
     );
   }
 
-  IconData _getTypeIcon(FileType type) {
+  IconData _getTypeIcon(SampleFileType type) {
     switch (type) {
-      case FileType.image:
+      case SampleFileType.image:
         return Icons.image;
-      case FileType.video:
+      case SampleFileType.video:
         return Icons.videocam;
-      case FileType.audio:
+      case SampleFileType.audio:
         return Icons.audiotrack;
-      case FileType.document:
+      case SampleFileType.document:
         return Icons.description;
-      case FileType.archive:
+      case SampleFileType.archive:
         return Icons.folder_zip;
-      case FileType.other:
+      case SampleFileType.other:
         return Icons.insert_drive_file;
     }
   }
 
-  Color _getTypeColor(FileType type) {
+  Color _getTypeColor(SampleFileType type) {
     switch (type) {
-      case FileType.image:
+      case SampleFileType.image:
         return Colors.blue;
-      case FileType.video:
+      case SampleFileType.video:
         return Colors.purple;
-      case FileType.audio:
+      case SampleFileType.audio:
         return Colors.orange;
-      case FileType.document:
+      case SampleFileType.document:
         return Colors.red;
-      case FileType.archive:
+      case SampleFileType.archive:
         return Colors.brown;
-      case FileType.other:
+      case SampleFileType.other:
         return Colors.grey;
     }
   }

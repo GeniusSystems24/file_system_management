@@ -36,8 +36,10 @@ class _QueueManagementScreenState extends State<QueueManagementScreen> {
       url: file.url,
       fileName: file.fileName,
       config: TransferConfigEntity(
-        group: 'queue_demo',
-        priority: priority,
+        metadata: {
+          'group': 'queue_demo',
+          'priority': priority,
+        },
       ),
     );
 
@@ -548,19 +550,19 @@ class _QueueManagementScreenState extends State<QueueManagementScreen> {
     return Colors.grey;
   }
 
-  IconData _getTypeIcon(FileType type) {
+  IconData _getTypeIcon(SampleFileType type) {
     switch (type) {
-      case FileType.image:
+      case SampleFileType.image:
         return Icons.image;
-      case FileType.video:
+      case SampleFileType.video:
         return Icons.videocam;
-      case FileType.audio:
+      case SampleFileType.audio:
         return Icons.audiotrack;
-      case FileType.document:
+      case SampleFileType.document:
         return Icons.description;
-      case FileType.archive:
+      case SampleFileType.archive:
         return Icons.folder_zip;
-      case FileType.other:
+      case SampleFileType.other:
         return Icons.insert_drive_file;
     }
   }
