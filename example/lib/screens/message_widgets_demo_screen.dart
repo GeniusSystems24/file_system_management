@@ -5,46 +5,51 @@ import 'package:flutter/material.dart';
 class MessageWidgetsDemoScreen extends StatefulWidget {
   final SocialSkin currentSkin;
 
-  const MessageWidgetsDemoScreen({
-    super.key,
-    required this.currentSkin,
-  });
+  const MessageWidgetsDemoScreen({super.key, required this.currentSkin});
 
   @override
-  State<MessageWidgetsDemoScreen> createState() => _MessageWidgetsDemoScreenState();
+  State<MessageWidgetsDemoScreen> createState() =>
+      _MessageWidgetsDemoScreenState();
 }
 
 class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
   // Real URLs for different media types
   static const _mediaUrls = {
     // Images
-    'image_small': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-    'image_medium': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
-    'image_large': 'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200',
-    'image_portrait': 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600',
+    'image_small':
+        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
+    'image_medium':
+        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
+    'image_large':
+        'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/smart_school_system.04.png?alt=media&token=fe5ac0a7-3a7c-4a5e-a744-1c4dd15780b7',
+    'image_portrait':
+        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600',
 
     // Thumbnails
-    'thumb_1': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100',
-    'thumb_2': 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=100',
+    'thumb_1':
+        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100',
+    'thumb_2':
+        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=100',
 
     // Videos
-    'video_1mb': 'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
-    'video_5mb': 'https://sample-videos.com/video321/mp4/360/big_buck_bunny_360p_5mb.mp4',
+    'video_1mb':
+        'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
+    'video_5mb':
+        'https://sample-videos.com/video321/mp4/360/big_buck_bunny_360p_5mb.mp4',
 
     // Audio
     'audio_mp3': 'https://sample-videos.com/audio/mp3/crowd-cheering.mp3',
 
     // Documents
-    'pdf_small': 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
+    'pdf_small':
+        'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
     'pdf_large': 'https://sample-videos.com/pdf/Sample-pdf-5mb.pdf',
   };
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ويدجت الرسائل'),
-      ),
+      appBar: AppBar(title: const Text('ويدجت الرسائل')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -85,9 +90,9 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -139,9 +144,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             url: _mediaUrls['image_portrait']!,
             width: 200,
             height: 300,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-            ),
+            config: const TransferWidgetConfig(autoStart: false),
           ),
         ),
       ],
@@ -179,9 +182,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             height: 180,
             duration: const Duration(minutes: 5, seconds: 45),
             hasAudio: true,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-            ),
+            config: const TransferWidgetConfig(autoStart: false),
           ),
         ),
       ],
@@ -214,9 +215,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             url: _mediaUrls['audio_mp3']!,
             duration: const Duration(minutes: 2, seconds: 30),
             waveform: _generateWaveform(40),
-            config: const TransferWidgetConfig(
-              autoStart: false,
-            ),
+            config: const TransferWidgetConfig(autoStart: false),
           ),
         ),
       ],
@@ -252,9 +251,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             fileSize: 512 * 1024,
             extension: 'XLSX',
             iconColor: Colors.green,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-            ),
+            config: const TransferWidgetConfig(autoStart: false),
           ),
         ),
       ],
@@ -289,9 +286,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             fileName: 'دليل_المستخدم.pdf',
             fileSize: 5 * 1024 * 1024,
             pageCount: 120,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-            ),
+            config: const TransferWidgetConfig(autoStart: false),
           ),
         ),
       ],
