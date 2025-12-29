@@ -2,6 +2,8 @@
 
 [![pub package](https://img.shields.io/pub/v/file_system_management.svg)](https://pub.dev/packages/file_system_management)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-View_Demo-blue?logo=github)](https://geniussystems24.github.io/file_system_management)
+
 
 A comprehensive Flutter package for managing file transfers with progress tracking, queue management, social media-inspired UI widgets, and injectable handlers. Built on top of `background_downloader` ^9.4.3.
 
@@ -59,10 +61,11 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  file_system_management: ^1.0.0
+  file_system_management: ^1.0.1
 ```
 
 **Requirements:**
+
 - Dart SDK: ^3.5.0
 - Flutter: >=3.24.0
 
@@ -77,6 +80,7 @@ flutter pub get
 ## What's New in 1.0.0
 
 ### ⚠️ Breaking Changes
+
 - Minimum Dart SDK upgraded to 3.5.0
 - Minimum Flutter SDK upgraded to 3.24.0
 - Updated `background_downloader` to ^9.4.3
@@ -168,6 +172,7 @@ final result = await enqueueDownload(EnqueueDownloadParams(
   ),
 ));
 ```
+
 | **Multi Upload** | Upload multiple files in single request |
 | **Data Upload** | Upload data from memory |
 | **Task Options** | Lifecycle callbacks (onTaskStart, onTaskFinished) |
@@ -970,6 +975,7 @@ flutter run
 ### From 0.2.x to 1.0.0
 
 1. **Update SDK requirements**
+
    ```yaml
    environment:
      sdk: ^3.5.0
@@ -977,6 +983,7 @@ flutter run
    ```
 
 2. **New initialization options**
+
    ```dart
    // Old
    await FileSystemController.instance.initialize();
@@ -990,6 +997,7 @@ flutter run
    ```
 
 3. **New download task options**
+
    ```dart
    // Old
    final task = createDownloadTask(url: url);
@@ -1008,6 +1016,7 @@ flutter run
    ```
 
 4. **Parallel downloads**
+
    ```dart
    // New in 1.0.0
    final task = createParallelDownloadTask(
@@ -1017,6 +1026,7 @@ flutter run
    ```
 
 5. **Batch operations**
+
    ```dart
    // New in 1.0.0
    await controller.downloadBatch(tasks, onProgress: ...);
@@ -1026,6 +1036,7 @@ flutter run
 ### From 0.1.x to 0.2.x
 
 1. **TaskItem renamed to TransferItem**
+
    ```dart
    // Old
    TaskItem item = ...;
@@ -1035,6 +1046,7 @@ flutter run
    ```
 
 2. **New message widgets**
+
    ```dart
    // Use pre-built widgets
    AudioMessageTransferWidget(...)

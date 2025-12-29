@@ -1,6 +1,6 @@
 name: file_system_management
 description: "A Flutter package for managing file download and upload tasks with progress tracking, customizable handlers, and social media-inspired UI widgets."
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/GeniusSystems24/file_system_management
 repository: https://github.com/GeniusSystems24/file_system_management
 issue_tracker: https://github.com/GeniusSystems24/file_system_management/issues
