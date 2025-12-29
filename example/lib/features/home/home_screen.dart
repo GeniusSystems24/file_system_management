@@ -182,6 +182,66 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
+          // Firebase Storage Section
+          const SectionHeader(
+            title: 'FIREBASE STORAGE',
+            icon: Icons.cloud,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: const [
+                FeatureCard(
+                  title: 'Firebase Download',
+                  description: 'Download files from Firebase Storage with authentication support',
+                  icon: Icons.cloud_download,
+                  route: '/firebase-download',
+                  color: Colors.orange,
+                  tags: ['Firebase', 'Auth', 'Resume'],
+                ),
+                SizedBox(height: 12),
+                FeatureCard(
+                  title: 'Firebase Upload',
+                  description: 'Upload files to Firebase Storage with signed URLs',
+                  icon: Icons.cloud_upload,
+                  route: '/firebase-upload',
+                  color: Colors.deepOrange,
+                  tags: ['Firebase', 'Signed URL', 'Progress'],
+                ),
+              ],
+            ),
+          ),
+
+          // HTTPS Section
+          const SectionHeader(
+            title: 'HTTPS TRANSFERS',
+            icon: Icons.http,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: const [
+                FeatureCard(
+                  title: 'HTTPS Download',
+                  description: 'Download files via HTTPS with custom headers and authentication',
+                  icon: Icons.download,
+                  route: '/https-download',
+                  color: Colors.blue,
+                  tags: ['HTTPS', 'Auth', 'Headers'],
+                ),
+                SizedBox(height: 12),
+                FeatureCard(
+                  title: 'HTTPS Upload',
+                  description: 'Upload files via HTTPS to REST APIs, S3, or cloud storage',
+                  icon: Icons.upload,
+                  route: '/https-upload',
+                  color: Colors.lightBlue,
+                  tags: ['S3', 'REST API', 'Chunked'],
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 32),
         ],
       ),
@@ -240,7 +300,7 @@ class HomeScreen extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildStatChip(context, '13+', 'Features'),
+              _buildStatChip(context, '17+', 'Features'),
               _buildStatChip(context, '5', 'Themes'),
               _buildStatChip(context, '6', 'Widgets'),
             ],

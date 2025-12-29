@@ -13,6 +13,10 @@ import '../features/storage/shared_storage_screen.dart';
 import '../features/cache/cache_management_screen.dart';
 import '../features/permissions/permissions_screen.dart';
 import '../features/rtl/rtl_support_screen.dart';
+import '../features/firebase/firebase_download_screen.dart';
+import '../features/firebase/firebase_upload_screen.dart';
+import '../features/https/https_download_screen.dart';
+import '../features/https/https_upload_screen.dart';
 
 /// App router configuration using go_router.
 final appRouter = GoRouter(
@@ -96,6 +100,30 @@ final appRouter = GoRouter(
       path: '/rtl-support',
       name: 'rtl-support',
       builder: (context, state) => const RtlSupportScreen(),
+    ),
+
+    // Firebase Storage
+    GoRoute(
+      path: '/firebase-download',
+      name: 'firebase-download',
+      builder: (context, state) => const FirebaseDownloadScreen(),
+    ),
+    GoRoute(
+      path: '/firebase-upload',
+      name: 'firebase-upload',
+      builder: (context, state) => const FirebaseUploadScreen(),
+    ),
+
+    // HTTPS
+    GoRoute(
+      path: '/https-download',
+      name: 'https-download',
+      builder: (context, state) => const HttpsDownloadScreen(),
+    ),
+    GoRoute(
+      path: '/https-upload',
+      name: 'https-upload',
+      builder: (context, state) => const HttpsUploadScreen(),
     ),
   ],
   errorBuilder: (context, state) => Scaffold(
