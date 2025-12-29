@@ -30,26 +30,32 @@ class _FirebaseDownloadScreenState extends State<FirebaseDownloadScreen> {
     _FirebaseSample(
       name: 'Sample Image',
       description: 'Download a sample image from Firebase Storage',
-      url: 'https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT.appspot.com/o/images%2Fsample.jpg?alt=media',
+      url:
+          'https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT.appspot.com/o/images%2Fsample.jpg?alt=media',
       icon: Icons.image,
     ),
     _FirebaseSample(
       name: 'Sample Document',
       description: 'Download a PDF document from Firebase Storage',
-      url: 'https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT.appspot.com/o/documents%2Fsample.pdf?alt=media',
+      url:
+          'https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT.appspot.com/o/documents%2Fsample.pdf?alt=media',
       icon: Icons.picture_as_pdf,
     ),
     _FirebaseSample(
       name: 'Sample Video',
       description: 'Download a video file from Firebase Storage',
-      url: 'https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT.appspot.com/o/videos%2Fsample.mp4?alt=media',
+      url:
+          'https://firebasestorage.googleapis.com/v0/b/YOUR_PROJECT.appspot.com/o/videos%2Fsample.mp4?alt=media',
       icon: Icons.videocam,
     ),
   ];
 
   void _log(String message) {
     setState(() {
-      _logs.insert(0, '${DateTime.now().toString().substring(11, 19)}: $message');
+      _logs.insert(
+        0,
+        '${DateTime.now().toString().substring(11, 19)}: $message',
+      );
       if (_logs.length > 50) _logs.removeLast();
     });
   }
@@ -148,9 +154,7 @@ class _FirebaseDownloadScreenState extends State<FirebaseDownloadScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Firebase Download'),
-      ),
+      appBar: AppBar(title: const Text('Firebase Download')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -313,22 +317,23 @@ class _FirebaseDownloadScreenState extends State<FirebaseDownloadScreen> {
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Firebase Auth Token'),
-                        content: const Text(
-                          'If your Firebase Storage rules require authentication, '
-                          'you need to provide a valid Firebase ID token.\n\n'
-                          'You can get the token from:\n'
-                          '• FirebaseAuth.instance.currentUser?.getIdToken()\n'
-                          '• Your backend authentication service',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('OK'),
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Firebase Auth Token'),
+                            content: const Text(
+                              'If your Firebase Storage rules require authentication, '
+                              'you need to provide a valid Firebase ID token.\n\n'
+                              'You can get the token from:\n'
+                              '• FirebaseAuth.instance.currentUser?.getIdToken()\n'
+                              '• Your backend authentication service',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('OK'),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                     );
                   },
                   icon: const Icon(Icons.help_outline, size: 16),
@@ -371,21 +376,23 @@ class _FirebaseDownloadScreenState extends State<FirebaseDownloadScreen> {
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
-            ..._samples.map((sample) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
+            ..._samples.map(
+              (sample) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(sample.icon, color: theme.colorScheme.primary),
                 ),
-                child: Icon(sample.icon, color: theme.colorScheme.primary),
+                title: Text(sample.name),
+                subtitle: Text(sample.description),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _selectSample(sample),
               ),
-              title: Text(sample.name),
-              subtitle: Text(sample.description),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _selectSample(sample),
-            )),
+            ),
           ],
         ),
       ),
@@ -398,66 +405,70 @@ class _FirebaseDownloadScreenState extends State<FirebaseDownloadScreen> {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Progress',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (transfer == null)
-            Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.cloud_download_outlined,
-                    size: 48,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Ready to download',
-                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: transfer.progress,
-                minHeight: 12,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        child: Column(
+          children: [
+            Text(
+              'Progress',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${(transfer.progress * 100).toStringAsFixed(1)}%'),
-                Text(_formatSpeed(transfer.speed)),
-                Text(_formatBytes(transfer.transferredBytes)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _getStatusColor(transfer).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                _getStatusLabel(transfer),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _getStatusColor(transfer),
+            const SizedBox(height: 16),
+            if (transfer == null)
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.cloud_download_outlined,
+                      size: 48,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ready to download',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: transfer.progress,
+                  minHeight: 12,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 ),
               ),
-            ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('${(transfer.progress * 100).toStringAsFixed(1)}%'),
+                  Text(_formatSpeed(transfer.speed)),
+                  Text(_formatBytes(transfer.transferredBytes)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(transfer).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _getStatusLabel(transfer),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _getStatusColor(transfer),
+                  ),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -625,8 +636,10 @@ if (stream != null) {
   }
 
   String _formatSpeed(double bytesPerSecond) {
-    if (bytesPerSecond < 1024) return '${bytesPerSecond.toStringAsFixed(0)} B/s';
-    if (bytesPerSecond < 1024 * 1024) return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    if (bytesPerSecond < 1024)
+      return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+    if (bytesPerSecond < 1024 * 1024)
+      return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
     return '${(bytesPerSecond / 1024 / 1024).toStringAsFixed(1)} MB/s';
   }
 

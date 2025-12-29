@@ -21,115 +21,115 @@ import '../features/https/https_upload_screen.dart';
 /// App router configuration using go_router.
 final appRouter = GoRouter(
   initialLocation: '/',
-  debugLogDiagnostics: true,
+  // debugLogDiagnostics: true,
   routes: [
     GoRoute(
       path: '/',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
-    ),
+      routes: [
+        // Downloads
+        GoRoute(
+          path: '/parallel-downloads',
+          name: 'parallel-downloads',
+          builder: (context, state) => const ParallelDownloadsScreen(),
+        ),
+        GoRoute(
+          path: '/batch-downloads',
+          name: 'batch-downloads',
+          builder: (context, state) => const BatchDownloadsScreen(),
+        ),
+        GoRoute(
+          path: '/background-downloads',
+          name: 'background-downloads',
+          builder: (context, state) => const BackgroundDownloadsScreen(),
+        ),
 
-    // Downloads
-    GoRoute(
-      path: '/parallel-downloads',
-      name: 'parallel-downloads',
-      builder: (context, state) => const ParallelDownloadsScreen(),
-    ),
-    GoRoute(
-      path: '/batch-downloads',
-      name: 'batch-downloads',
-      builder: (context, state) => const BatchDownloadsScreen(),
-    ),
-    GoRoute(
-      path: '/background-downloads',
-      name: 'background-downloads',
-      builder: (context, state) => const BackgroundDownloadsScreen(),
-    ),
+        // Queue
+        GoRoute(
+          path: '/queue-management',
+          name: 'queue-management',
+          builder: (context, state) => const QueueManagementScreen(),
+        ),
 
-    // Queue
-    GoRoute(
-      path: '/queue-management',
-      name: 'queue-management',
-      builder: (context, state) => const QueueManagementScreen(),
-    ),
+        // Widgets
+        GoRoute(
+          path: '/message-widgets',
+          name: 'message-widgets',
+          builder: (context, state) => const MessageWidgetsScreen(),
+        ),
 
-    // Widgets
-    GoRoute(
-      path: '/message-widgets',
-      name: 'message-widgets',
-      builder: (context, state) => const MessageWidgetsScreen(),
-    ),
+        // Themes
+        GoRoute(
+          path: '/social-themes',
+          name: 'social-themes',
+          builder: (context, state) => const SocialThemesScreen(),
+        ),
 
-    // Themes
-    GoRoute(
-      path: '/social-themes',
-      name: 'social-themes',
-      builder: (context, state) => const SocialThemesScreen(),
-    ),
+        // Handlers
+        GoRoute(
+          path: '/custom-handlers',
+          name: 'custom-handlers',
+          builder: (context, state) => const CustomHandlersScreen(),
+        ),
 
-    // Handlers
-    GoRoute(
-      path: '/custom-handlers',
-      name: 'custom-handlers',
-      builder: (context, state) => const CustomHandlersScreen(),
-    ),
+        // Storage
+        GoRoute(
+          path: '/shared-storage',
+          name: 'shared-storage',
+          builder: (context, state) => const SharedStorageScreen(),
+        ),
 
-    // Storage
-    GoRoute(
-      path: '/shared-storage',
-      name: 'shared-storage',
-      builder: (context, state) => const SharedStorageScreen(),
-    ),
+        // Cache
+        GoRoute(
+          path: '/cache-management',
+          name: 'cache-management',
+          builder: (context, state) => const CacheManagementScreen(),
+        ),
 
-    // Cache
-    GoRoute(
-      path: '/cache-management',
-      name: 'cache-management',
-      builder: (context, state) => const CacheManagementScreen(),
-    ),
+        // Permissions
+        GoRoute(
+          path: '/permissions',
+          name: 'permissions',
+          builder: (context, state) => const PermissionsScreen(),
+        ),
 
-    // Permissions
-    GoRoute(
-      path: '/permissions',
-      name: 'permissions',
-      builder: (context, state) => const PermissionsScreen(),
-    ),
+        // RTL
+        GoRoute(
+          path: '/rtl-support',
+          name: 'rtl-support',
+          builder: (context, state) => const RtlSupportScreen(),
+        ),
 
-    // RTL
-    GoRoute(
-      path: '/rtl-support',
-      name: 'rtl-support',
-      builder: (context, state) => const RtlSupportScreen(),
-    ),
+        // Firebase Storage
+        GoRoute(
+          path: '/firebase-download',
+          name: 'firebase-download',
+          builder: (context, state) => const FirebaseDownloadScreen(),
+        ),
+        GoRoute(
+          path: '/firebase-upload',
+          name: 'firebase-upload',
+          builder: (context, state) => const FirebaseUploadScreen(),
+        ),
 
-    // Firebase Storage
-    GoRoute(
-      path: '/firebase-download',
-      name: 'firebase-download',
-      builder: (context, state) => const FirebaseDownloadScreen(),
-    ),
-    GoRoute(
-      path: '/firebase-upload',
-      name: 'firebase-upload',
-      builder: (context, state) => const FirebaseUploadScreen(),
-    ),
-
-    // HTTPS
-    GoRoute(
-      path: '/https-download',
-      name: 'https-download',
-      builder: (context, state) => const HttpsDownloadScreen(),
-    ),
-    GoRoute(
-      path: '/https-upload',
-      name: 'https-upload',
-      builder: (context, state) => const HttpsUploadScreen(),
+        // HTTPS
+        GoRoute(
+          path: '/https-download',
+          name: 'https-download',
+          builder: (context, state) => const HttpsDownloadScreen(),
+        ),
+        GoRoute(
+          path: '/https-upload',
+          name: 'https-upload',
+          builder: (context, state) => const HttpsUploadScreen(),
+        ),
+      ],
     ),
   ],
-  errorBuilder: (context, state) => Scaffold(
-    appBar: AppBar(title: const Text('Error')),
-    body: Center(
-      child: Text('Page not found: ${state.uri}'),
-    ),
-  ),
+  errorBuilder:
+      (context, state) => Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(child: Text('Page not found: ${state.uri}')),
+      ),
 );
