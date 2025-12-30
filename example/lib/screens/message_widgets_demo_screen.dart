@@ -113,6 +113,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
   /// Create real download stream using TransferController
   Stream<TransferProgress> _createDownloadStream(DownloadPayload payload) {
     final controller = StreamController<TransferProgress>();
+    var isClosed = false;
 
     _controller.download(url: payload.url, fileName: payload.fileName).then((
       result,
@@ -121,6 +122,8 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
         onSuccess: (stream) {
           stream.listen(
             (transfer) {
+              if (isClosed) return;
+
               controller.add(
                 TransferProgress(
                   bytesTransferred:
@@ -135,16 +138,21 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
               );
 
               if (transfer.isComplete || transfer.isFailed) {
+                isClosed = true;
                 controller.close();
               }
             },
             onError: (e) {
+              if (isClosed) return;
+              isClosed = true;
               controller.addError(e);
               controller.close();
             },
           );
         },
         onFailure: (error) {
+          if (isClosed) return;
+          isClosed = true;
           controller.addError(error);
           controller.close();
         },

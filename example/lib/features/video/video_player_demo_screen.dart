@@ -127,6 +127,7 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
 
   Stream<TransferProgress> _createDownloadStream(DownloadPayload payload) {
     final controller = StreamController<TransferProgress>();
+    var isClosed = false;
 
     TransferController.instance
         .download(url: payload.url, fileName: payload.fileName)
@@ -135,6 +136,8 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
             onSuccess: (stream) {
               stream.listen(
                 (transfer) {
+                  if (isClosed) return;
+
                   controller.add(
                     TransferProgress(
                       bytesTransferred:
@@ -150,16 +153,21 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                   );
 
                   if (transfer.isComplete || transfer.isFailed) {
+                    isClosed = true;
                     controller.close();
                   }
                 },
                 onError: (e) {
+                  if (isClosed) return;
+                  isClosed = true;
                   controller.addError(e);
                   controller.close();
                 },
               );
             },
             onFailure: (error) {
+              if (isClosed) return;
+              isClosed = true;
               controller.addError(error);
               controller.close();
             },
