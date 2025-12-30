@@ -335,6 +335,36 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
         ),
 
         const SizedBox(height: 32),
+
+        // Display Mode Section
+        _buildSectionHeader(
+          'Display Modes',
+          Icons.fullscreen,
+          'Choose how videos are displayed',
+        ),
+        const SizedBox(height: 16),
+
+        // Inline Mode
+        _buildDisplayModeExample(
+          'Inline Mode (Default)',
+          'Video plays within the card - like WhatsApp',
+          VideoDisplayMode.inline,
+          _sampleVideos[4],
+          Icons.picture_in_picture,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Fullscreen Mode
+        _buildDisplayModeExample(
+          'Fullscreen Mode',
+          'Opens dedicated player screen - like Telegram',
+          VideoDisplayMode.fullscreen,
+          _sampleVideos[5],
+          Icons.fullscreen,
+        ),
+
+        const SizedBox(height: 32),
       ],
     );
   }
@@ -527,6 +557,124 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                   height: 180,
                   onDownload: _createDownloadStream,
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisplayModeExample(
+    String title,
+    String description,
+    VideoDisplayMode mode,
+    _VideoSample video,
+    IconData modeIcon,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _themeData.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(modeIcon, color: _themeData.primaryColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: VideoDownloadPlayerWidget(
+                  url: video.url,
+                  thumbnailUrl: video.thumbnailUrl,
+                  fileName: '${mode.name}_${video.title.replaceAll(' ', '_')}.mp4',
+                  fileSize: video.fileSize,
+                  duration: video.duration,
+                  title: video.title,
+                  subtitle: video.description,
+                  config: VideoPlayerConfig(
+                    displayMode: mode,
+                    autoPlay: true,
+                  ),
+                  themeData: _themeData,
+                  width: double.infinity,
+                  height: 180,
+                  onDownload: _createDownloadStream,
+                  onPlayStart: () {
+                    debugPrint('Playing in $mode mode: ${video.title}');
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: mode == VideoDisplayMode.fullscreen
+                    ? Colors.blue.shade50
+                    : Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    mode == VideoDisplayMode.fullscreen
+                        ? Icons.touch_app
+                        : Icons.play_circle,
+                    size: 16,
+                    color: mode == VideoDisplayMode.fullscreen
+                        ? Colors.blue.shade700
+                        : Colors.green.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    mode == VideoDisplayMode.fullscreen
+                        ? 'Tap to open fullscreen player'
+                        : 'Tap to play inline',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: mode == VideoDisplayMode.fullscreen
+                          ? Colors.blue.shade700
+                          : Colors.green.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

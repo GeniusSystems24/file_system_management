@@ -4,11 +4,21 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../handlers/transfer_progress.dart';
 import '../../handlers/transfer_handler.dart';
 import '../../theme/social_transfer_theme.dart';
+
+/// Display mode for video playback.
+enum VideoDisplayMode {
+  /// Play video inline within the card widget.
+  inline,
+
+  /// Open fullscreen player when tapped (like Telegram).
+  fullscreen,
+}
 
 /// Configuration for the video download player widget.
 class VideoPlayerConfig {
@@ -45,6 +55,18 @@ class VideoPlayerConfig {
   /// Material controls color customization.
   final ChewieProgressColors? progressColors;
 
+  /// Display mode for video playback.
+  final VideoDisplayMode displayMode;
+
+  /// Whether to show close button in fullscreen mode.
+  final bool showCloseButton;
+
+  /// Whether to hide status bar in fullscreen mode.
+  final bool hideStatusBarInFullscreen;
+
+  /// Background color for fullscreen mode.
+  final Color fullscreenBackgroundColor;
+
   const VideoPlayerConfig({
     this.autoStartDownload = false,
     this.autoPlay = false,
@@ -57,7 +79,48 @@ class VideoPlayerConfig {
     this.allowMuting = true,
     this.errorBuilder,
     this.progressColors,
+    this.displayMode = VideoDisplayMode.inline,
+    this.showCloseButton = true,
+    this.hideStatusBarInFullscreen = true,
+    this.fullscreenBackgroundColor = Colors.black,
   });
+
+  /// Create a copy with some fields replaced.
+  VideoPlayerConfig copyWith({
+    bool? autoStartDownload,
+    bool? autoPlay,
+    bool? looping,
+    bool? showControls,
+    double? aspectRatio,
+    Widget? placeholder,
+    bool? allowFullScreen,
+    bool? allowPlaybackSpeedChanging,
+    bool? allowMuting,
+    Widget Function(BuildContext context, String error)? errorBuilder,
+    ChewieProgressColors? progressColors,
+    VideoDisplayMode? displayMode,
+    bool? showCloseButton,
+    bool? hideStatusBarInFullscreen,
+    Color? fullscreenBackgroundColor,
+  }) {
+    return VideoPlayerConfig(
+      autoStartDownload: autoStartDownload ?? this.autoStartDownload,
+      autoPlay: autoPlay ?? this.autoPlay,
+      looping: looping ?? this.looping,
+      showControls: showControls ?? this.showControls,
+      aspectRatio: aspectRatio ?? this.aspectRatio,
+      placeholder: placeholder ?? this.placeholder,
+      allowFullScreen: allowFullScreen ?? this.allowFullScreen,
+      allowPlaybackSpeedChanging: allowPlaybackSpeedChanging ?? this.allowPlaybackSpeedChanging,
+      allowMuting: allowMuting ?? this.allowMuting,
+      errorBuilder: errorBuilder ?? this.errorBuilder,
+      progressColors: progressColors ?? this.progressColors,
+      displayMode: displayMode ?? this.displayMode,
+      showCloseButton: showCloseButton ?? this.showCloseButton,
+      hideStatusBarInFullscreen: hideStatusBarInFullscreen ?? this.hideStatusBarInFullscreen,
+      fullscreenBackgroundColor: fullscreenBackgroundColor ?? this.fullscreenBackgroundColor,
+    );
+  }
 }
 
 /// State of the video download player.
@@ -92,19 +155,28 @@ enum VideoPlayerState {
 /// This widget combines file download functionality with video playback,
 /// providing a seamless experience for viewing remote videos.
 ///
+/// Supports two display modes:
+/// - [VideoDisplayMode.inline]: Plays video within the card widget
+/// - [VideoDisplayMode.fullscreen]: Opens a fullscreen player like Telegram
+///
 /// Example:
 /// ```dart
+/// // Inline mode (default)
 /// VideoDownloadPlayerWidget(
 ///   url: 'https://example.com/video.mp4',
 ///   thumbnailUrl: 'https://example.com/thumb.jpg',
-///   fileName: 'video.mp4',
-///   fileSize: 1024 * 1024 * 10, // 10 MB
-///   duration: Duration(minutes: 2, seconds: 30),
 ///   onDownload: (payload) => downloadStream(payload),
+/// )
+///
+/// // Fullscreen mode (like Telegram)
+/// VideoDownloadPlayerWidget(
+///   url: 'https://example.com/video.mp4',
+///   thumbnailUrl: 'https://example.com/thumb.jpg',
 ///   config: VideoPlayerConfig(
+///     displayMode: VideoDisplayMode.fullscreen,
 ///     autoPlay: true,
-///     showControls: true,
 ///   ),
+///   onDownload: (payload) => downloadStream(payload),
 /// )
 /// ```
 class VideoDownloadPlayerWidget extends StatefulWidget {
@@ -172,6 +244,12 @@ class VideoDownloadPlayerWidget extends StatefulWidget {
     TransferProgress progress,
   )? progressBuilder;
 
+  /// Title to show in fullscreen mode.
+  final String? title;
+
+  /// Subtitle to show in fullscreen mode.
+  final String? subtitle;
+
   const VideoDownloadPlayerWidget({
     super.key,
     required this.url,
@@ -193,6 +271,8 @@ class VideoDownloadPlayerWidget extends StatefulWidget {
     this.onStateChange,
     this.actionButtonBuilder,
     this.progressBuilder,
+    this.title,
+    this.subtitle,
   });
 
   @override
@@ -215,6 +295,9 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
 
   double get _width => widget.width ?? 320;
   double get _height => widget.height ?? 180;
+
+  bool get _isFullscreenMode =>
+      widget.config.displayMode == VideoDisplayMode.fullscreen;
 
   @override
   void initState() {
@@ -273,7 +356,7 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
             widget.onDownloadComplete?.call(_localFilePath!);
 
             if (widget.config.autoPlay) {
-              _initializePlayer();
+              _handlePlay();
             }
           } else if (progress.isFailed) {
             _errorMessage = progress.errorMessage ?? 'Download failed';
@@ -299,17 +382,16 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
   }
 
   Future<void> _initializePlayer() async {
-    if (_localFilePath == null) return;
+    if (_localFilePath == null && widget.url.isEmpty) return;
 
     _setState(VideoPlayerState.initializing);
 
     try {
-      final file = File(_localFilePath!);
-      if (!file.existsSync()) {
+      if (_localFilePath != null && File(_localFilePath!).existsSync()) {
+        _videoController = VideoPlayerController.file(File(_localFilePath!));
+      } else {
         // Try playing from URL directly
         _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-      } else {
-        _videoController = VideoPlayerController.file(file);
       }
 
       await _videoController!.initialize();
@@ -356,6 +438,43 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
     }
   }
 
+  void _handlePlay() {
+    if (_isFullscreenMode) {
+      _openFullscreenPlayer();
+    } else {
+      _initializePlayer();
+    }
+  }
+
+  void _openFullscreenPlayer() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: true,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return _FullscreenVideoPlayer(
+            url: widget.url,
+            localPath: _localFilePath,
+            title: widget.title ?? widget.fileName ?? _extractFileName(widget.url),
+            subtitle: widget.subtitle,
+            duration: widget.duration,
+            config: widget.config,
+            themeData: widget.themeData,
+            onPlayStart: widget.onPlayStart,
+            onPlayComplete: widget.onPlayComplete,
+            onError: widget.onError,
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
   void _handleActionTap() {
     switch (_state) {
       case VideoPlayerState.idle:
@@ -372,7 +491,7 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
         _startDownload(); // Retry
         break;
       case VideoPlayerState.ready:
-        _initializePlayer();
+        _handlePlay();
         break;
       case VideoPlayerState.initializing:
         // Wait
@@ -432,6 +551,10 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
         return _buildThumbnailWithOverlay(_buildInitializingOverlay());
 
       case VideoPlayerState.playing:
+        // For fullscreen mode, always show thumbnail with play button
+        if (_isFullscreenMode) {
+          return _buildThumbnailWithOverlay(_buildPlayButton());
+        }
         return _buildVideoPlayer();
     }
   }
@@ -444,6 +567,24 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
         Container(color: Colors.black38),
         overlay,
         if (widget.duration != null) _buildDurationBadge(),
+        // Display mode indicator
+        if (_isFullscreenMode)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(
+                Icons.fullscreen,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -778,5 +919,530 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
       return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     }
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Fullscreen video player screen (like Telegram).
+class _FullscreenVideoPlayer extends StatefulWidget {
+  final String url;
+  final String? localPath;
+  final String? title;
+  final String? subtitle;
+  final Duration? duration;
+  final VideoPlayerConfig config;
+  final SocialTransferThemeData? themeData;
+  final void Function()? onPlayStart;
+  final void Function()? onPlayComplete;
+  final void Function(String error)? onError;
+
+  const _FullscreenVideoPlayer({
+    required this.url,
+    this.localPath,
+    this.title,
+    this.subtitle,
+    this.duration,
+    required this.config,
+    this.themeData,
+    this.onPlayStart,
+    this.onPlayComplete,
+    this.onError,
+  });
+
+  @override
+  State<_FullscreenVideoPlayer> createState() => _FullscreenVideoPlayerState();
+}
+
+class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+  bool _isInitializing = true;
+  String? _errorMessage;
+  bool _showControls = true;
+
+  SocialTransferThemeData get theme =>
+      widget.themeData ?? SocialTransferThemeData.whatsApp();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.config.hideStatusBarInFullscreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    _initializePlayer();
+  }
+
+  @override
+  void dispose() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    super.dispose();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      if (widget.localPath != null && File(widget.localPath!).existsSync()) {
+        _videoController = VideoPlayerController.file(File(widget.localPath!));
+      } else {
+        _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      }
+
+      await _videoController!.initialize();
+
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: true,
+        looping: widget.config.looping,
+        showControls: false, // We use custom controls
+        aspectRatio: widget.config.aspectRatio ?? _videoController!.value.aspectRatio,
+        allowFullScreen: false, // Already fullscreen
+        allowPlaybackSpeedChanging: widget.config.allowPlaybackSpeedChanging,
+        allowMuting: widget.config.allowMuting,
+        materialProgressColors: widget.config.progressColors ?? ChewieProgressColors(
+          playedColor: theme.primaryColor,
+          handleColor: theme.primaryColor,
+          bufferedColor: theme.primaryColor.withOpacity(0.3),
+          backgroundColor: Colors.white24,
+        ),
+      );
+
+      _videoController!.addListener(_onVideoStateChanged);
+
+      setState(() => _isInitializing = false);
+      widget.onPlayStart?.call();
+    } catch (e) {
+      setState(() {
+        _isInitializing = false;
+        _errorMessage = 'Failed to initialize player: $e';
+      });
+      widget.onError?.call(_errorMessage!);
+    }
+  }
+
+  void _onVideoStateChanged() {
+    if (_videoController == null) return;
+
+    final value = _videoController!.value;
+
+    if (value.hasError) {
+      setState(() => _errorMessage = value.errorDescription ?? 'Playback error');
+      widget.onError?.call(_errorMessage!);
+    } else if (value.position >= value.duration && value.duration.inMilliseconds > 0) {
+      widget.onPlayComplete?.call();
+    }
+  }
+
+  void _toggleControls() {
+    setState(() => _showControls = !_showControls);
+  }
+
+  void _togglePlayPause() {
+    if (_videoController == null) return;
+
+    if (_videoController!.value.isPlaying) {
+      _videoController!.pause();
+    } else {
+      _videoController!.play();
+    }
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: widget.config.fullscreenBackgroundColor,
+      body: GestureDetector(
+        onTap: _toggleControls,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Video player
+            _buildVideoContent(),
+
+            // Controls overlay
+            if (_showControls) ...[
+              // Top bar
+              _buildTopBar(),
+
+              // Center play/pause button
+              if (!_isInitializing && _errorMessage == null)
+                _buildCenterControls(),
+
+              // Bottom progress bar
+              if (!_isInitializing && _errorMessage == null)
+                _buildBottomControls(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoContent() {
+    if (_isInitializing) {
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation(theme.primaryColor),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error, color: theme.errorColor, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isInitializing = true;
+                  _errorMessage = null;
+                });
+                _initializePlayer();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_chewieController == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Center(
+      child: AspectRatio(
+        aspectRatio: _videoController!.value.aspectRatio,
+        child: Chewie(controller: _chewieController!),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black54, Colors.transparent],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                // Close button
+                if (widget.config.showCloseButton)
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    iconSize: 28,
+                  ),
+                const SizedBox(width: 8),
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.title != null)
+                        Text(
+                          widget.title!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (widget.subtitle != null)
+                        Text(
+                          widget.subtitle!,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                // More options
+                IconButton(
+                  onPressed: () {
+                    // Show options menu
+                  },
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterControls() {
+    final isPlaying = _videoController?.value.isPlaying ?? false;
+
+    return Center(
+      child: GestureDetector(
+        onTap: _togglePlayPause,
+        child: AnimatedOpacity(
+          opacity: _showControls ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 200),
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.black45,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPlaying ? Icons.pause : Icons.play_arrow,
+              color: Colors.white,
+              size: 48,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControls() {
+    if (_videoController == null) return const SizedBox.shrink();
+
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [Colors.black54, Colors.transparent],
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress bar
+                ValueListenableBuilder<VideoPlayerValue>(
+                  valueListenable: _videoController!,
+                  builder: (context, value, child) {
+                    final duration = value.duration;
+                    final position = value.position;
+
+                    return Column(
+                      children: [
+                        SliderTheme(
+                          data: SliderThemeData(
+                            trackHeight: 3,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
+                            overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 12,
+                            ),
+                            activeTrackColor: theme.primaryColor,
+                            inactiveTrackColor: Colors.white24,
+                            thumbColor: theme.primaryColor,
+                            overlayColor: theme.primaryColor.withOpacity(0.2),
+                          ),
+                          child: Slider(
+                            value: duration.inMilliseconds > 0
+                                ? position.inMilliseconds / duration.inMilliseconds
+                                : 0,
+                            onChanged: (value) {
+                              final newPosition = Duration(
+                                milliseconds: (value * duration.inMilliseconds).round(),
+                              );
+                              _videoController!.seekTo(newPosition);
+                            },
+                          ),
+                        ),
+                        // Time labels
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(position),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                _formatDuration(duration),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Fullscreen video player that can be used independently.
+///
+/// This is a public class that can be used to open a fullscreen video player
+/// without using the VideoDownloadPlayerWidget.
+class FullscreenVideoPlayer extends StatelessWidget {
+  /// URL of the video to play.
+  final String url;
+
+  /// Local file path (if already downloaded).
+  final String? localPath;
+
+  /// Title to show in the top bar.
+  final String? title;
+
+  /// Subtitle to show in the top bar.
+  final String? subtitle;
+
+  /// Video duration.
+  final Duration? duration;
+
+  /// Player configuration.
+  final VideoPlayerConfig config;
+
+  /// Theme data for styling.
+  final SocialTransferThemeData? themeData;
+
+  /// Callback when video starts playing.
+  final void Function()? onPlayStart;
+
+  /// Callback when video finishes playing.
+  final void Function()? onPlayComplete;
+
+  /// Callback when an error occurs.
+  final void Function(String error)? onError;
+
+  const FullscreenVideoPlayer({
+    super.key,
+    required this.url,
+    this.localPath,
+    this.title,
+    this.subtitle,
+    this.duration,
+    this.config = const VideoPlayerConfig(),
+    this.themeData,
+    this.onPlayStart,
+    this.onPlayComplete,
+    this.onError,
+  });
+
+  /// Opens the fullscreen video player.
+  static Future<void> open(
+    BuildContext context, {
+    required String url,
+    String? localPath,
+    String? title,
+    String? subtitle,
+    Duration? duration,
+    VideoPlayerConfig config = const VideoPlayerConfig(),
+    SocialTransferThemeData? themeData,
+    void Function()? onPlayStart,
+    void Function()? onPlayComplete,
+    void Function(String error)? onError,
+  }) {
+    return Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: true,
+        barrierColor: Colors.black,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return _FullscreenVideoPlayer(
+            url: url,
+            localPath: localPath,
+            title: title,
+            subtitle: subtitle,
+            duration: duration,
+            config: config,
+            themeData: themeData,
+            onPlayStart: onPlayStart,
+            onPlayComplete: onPlayComplete,
+            onError: onError,
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _FullscreenVideoPlayer(
+      url: url,
+      localPath: localPath,
+      title: title,
+      subtitle: subtitle,
+      duration: duration,
+      config: config,
+      themeData: themeData,
+      onPlayStart: onPlayStart,
+      onPlayComplete: onPlayComplete,
+      onError: onError,
+    );
   }
 }
