@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:file_system_management/file_system_management.dart';
 import 'package:flutter/material.dart';
 
-/// Demo screen showing all message transfer widgets with real content.
-/// This screen demonstrates various widget types, states, and configurations.
+/// Demo screen showing all message transfer widgets with REAL download functionality.
+/// This screen demonstrates various widget types with actual file downloads.
 class MessageWidgetsDemoScreen extends StatefulWidget {
   final SocialSkin currentSkin;
 
@@ -17,51 +19,86 @@ class MessageWidgetsDemoScreen extends StatefulWidget {
 }
 
 class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
-  // Real URLs for different media types
+  final _controller = TransferController.instance;
+  bool _isInitialized = false;
+  String? _initError;
+
+  // Track active downloads
+  final Map<String, StreamSubscription> _subscriptions = {};
+  final Map<String, TransferProgress> _progressMap = {};
+
+  // Real downloadable URLs
   static const _mediaUrls = {
-    // Images
-    'image_small':
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-    'image_medium':
-        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
-    'image_large':
-        'https://firebasestorage.googleapis.com/v0/b/skycachefiles.appspot.com/o/smart_school_system.04.png?alt=media&token=fe5ac0a7-3a7c-4a5e-a744-1c4dd15780b7',
-    'image_portrait':
-        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600',
-    'image_landscape':
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900',
-    'image_nature':
-        'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=700',
+    // Real Images (Unsplash - direct download)
+    'image_1':
+        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80',
+    'image_2':
+        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80',
+    'image_3':
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+    'image_4':
+        'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
+    'image_5':
+        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=600&q=80',
 
     // Thumbnails
     'thumb_1':
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100',
+        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100&q=60',
     'thumb_2':
-        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=100',
+        'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=100&q=60',
     'thumb_3':
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=100',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=100&q=60',
 
-    // Videos
+    // Real Videos (sample-videos.com)
     'video_1mb':
         'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
+    'video_2mb':
+        'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_2mb.mp4',
     'video_5mb':
         'https://sample-videos.com/video321/mp4/360/big_buck_bunny_360p_5mb.mp4',
-    'video_10mb':
-        'https://sample-videos.com/video321/mp4/480/big_buck_bunny_480p_10mb.mp4',
 
-    // Audio
-    'audio_mp3': 'https://sample-videos.com/audio/mp3/crowd-cheering.mp3',
-    'audio_wave': 'https://sample-videos.com/audio/mp3/wave.mp3',
+    // Real Audio
+    'audio_1': 'https://sample-videos.com/audio/mp3/crowd-cheering.mp3',
+    'audio_2': 'https://sample-videos.com/audio/mp3/wave.mp3',
 
-    // Documents
-    'pdf_small':
+    // Real Documents
+    'pdf_1':
         'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
-    'pdf_large': 'https://sample-videos.com/pdf/Sample-pdf-5mb.pdf',
+    'pdf_2': 'https://sample-videos.com/pdf/Sample-pdf-5mb.pdf',
 
-    // Archives
-    'zip_file': 'https://sample-videos.com/zip/1mb.zip',
-    'zip_large': 'https://sample-videos.com/zip/10mb.zip',
+    // Real Archives
+    'zip_1mb': 'https://sample-videos.com/zip/1mb.zip',
+    'zip_5mb': 'https://sample-videos.com/zip/5mb.zip',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeController();
+  }
+
+  Future<void> _initializeController() async {
+    try {
+      if (!_controller.isInitialized) {
+        await _controller.initialize();
+      }
+      if (mounted) {
+        setState(() => _isInitialized = true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _initError = e.toString());
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final sub in _subscriptions.values) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
 
   /// Get theme data based on current skin
   SocialTransferThemeData get _themeData {
@@ -77,6 +114,64 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
     }
   }
 
+  /// Create real download stream using TransferController
+  Stream<TransferProgress> _createDownloadStream(DownloadPayload payload) {
+    final controller = StreamController<TransferProgress>();
+
+    _controller.download(url: payload.url, fileName: payload.fileName).then(
+      (result) {
+        result.fold(
+          onSuccess: (stream) {
+            stream.listen(
+              (transfer) {
+                controller.add(TransferProgress(
+                  bytesTransferred: (transfer.progress * (payload.expectedSize ?? 1024 * 1024)).round(),
+                  totalBytes: payload.expectedSize ?? 1024 * 1024,
+                  bytesPerSecond: transfer.speed,
+                  status: _mapStatus(transfer.status),
+                  errorMessage: transfer.isFailed ? 'فشل التحميل' : null,
+                ));
+
+                if (transfer.isComplete || transfer.isFailed) {
+                  controller.close();
+                }
+              },
+              onError: (e) {
+                controller.addError(e);
+                controller.close();
+              },
+            );
+          },
+          onFailure: (error) {
+            controller.addError(error);
+            controller.close();
+          },
+        );
+      },
+    );
+
+    return controller.stream;
+  }
+
+  TransferStatus _mapStatus(TransferStatusEntity status) {
+    switch (status) {
+      case TransferStatusEntity.pending:
+        return TransferStatus.pending;
+      case TransferStatusEntity.running:
+        return TransferStatus.running;
+      case TransferStatusEntity.paused:
+        return TransferStatus.paused;
+      case TransferStatusEntity.complete:
+        return TransferStatus.completed;
+      case TransferStatusEntity.failed:
+        return TransferStatus.failed;
+      case TransferStatusEntity.canceled:
+        return TransferStatus.cancelled;
+      case TransferStatusEntity.waitingToRetry:
+        return TransferStatus.waitingToRetry;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -85,7 +180,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
       ),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('ويدجت الرسائل'),
+          title: const Text('تحميل حقيقي - ويدجت الرسائل'),
           actions: [
             Chip(
               label: Text(_getSkinName()),
@@ -94,50 +189,115 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             const SizedBox(width: 8),
           ],
         ),
-        body: Container(
-          decoration: BoxDecoration(
-            color: _getBackgroundColor(),
-          ),
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildSectionHeader('رسائل الصور', Icons.image),
-              const SizedBox(height: 8),
-              _buildImageMessages(),
+        body: _buildBody(),
+      ),
+    );
+  }
 
-              const SizedBox(height: 24),
-              _buildSectionHeader('رسائل الفيديو', Icons.videocam),
-              const SizedBox(height: 8),
-              _buildVideoMessages(),
+  Widget _buildBody() {
+    if (_initError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            const SizedBox(height: 16),
+            Text('خطأ في التهيئة', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(_initError!, textAlign: TextAlign.center),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _initializeController,
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      );
+    }
 
-              const SizedBox(height: 24),
-              _buildSectionHeader('رسائل الصوت', Icons.audiotrack),
-              const SizedBox(height: 8),
-              _buildAudioMessages(),
+    if (!_isInitialized) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('جاري تهيئة محرك التحميل...'),
+          ],
+        ),
+      );
+    }
 
-              const SizedBox(height: 24),
-              _buildSectionHeader('رسائل الملفات', Icons.insert_drive_file),
-              const SizedBox(height: 8),
-              _buildFileMessages(),
+    return Container(
+      decoration: BoxDecoration(color: _getBackgroundColor()),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildInfoCard(),
 
-              const SizedBox(height: 24),
-              _buildSectionHeader('رسائل المستندات', Icons.description),
-              const SizedBox(height: 8),
-              _buildDocumentMessages(),
+          const SizedBox(height: 16),
+          _buildSectionHeader('صور حقيقية للتحميل', Icons.image),
+          const SizedBox(height: 8),
+          _buildRealImageMessages(),
 
-              const SizedBox(height: 24),
-              _buildSectionHeader('حالات التحويل المختلفة', Icons.sync),
-              const SizedBox(height: 8),
-              _buildTransferStatesDemo(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('فيديوهات حقيقية للتحميل', Icons.videocam),
+          const SizedBox(height: 8),
+          _buildRealVideoMessages(),
 
-              const SizedBox(height: 24),
-              _buildSectionHeader('إعدادات متنوعة', Icons.settings),
-              const SizedBox(height: 8),
-              _buildConfigurationExamples(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('ملفات صوتية حقيقية', Icons.audiotrack),
+          const SizedBox(height: 8),
+          _buildRealAudioMessages(),
 
-              const SizedBox(height: 32),
-            ],
-          ),
+          const SizedBox(height: 24),
+          _buildSectionHeader('ملفات حقيقية للتحميل', Icons.insert_drive_file),
+          const SizedBox(height: 8),
+          _buildRealFileMessages(),
+
+          const SizedBox(height: 24),
+          _buildSectionHeader('مستندات PDF حقيقية', Icons.description),
+          const SizedBox(height: 8),
+          _buildRealDocumentMessages(),
+
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Card(
+      color: _themeData.primaryColor.withOpacity(0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: _themeData.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'تحميل ملفات حقيقية',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _themeData.primaryColor,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'اضغط على زر التحميل لبدء تحميل الملفات الحقيقية. '
+              'يمكنك إيقاف/استئناف/إلغاء التحميل.',
+              style: TextStyle(color: _themeData.subtitleColor),
+            ),
+          ],
         ),
       ),
     );
@@ -192,23 +352,28 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
     );
   }
 
-  Widget _buildImageMessages() {
+  Widget _buildRealImageMessages() {
     return Column(
       children: [
-        // Outgoing image with caption - landscape
+        // Image 1 - Landscape Mountain
         _buildMessageRow(
           isOutgoing: true,
+          label: 'صورة جبال - 800x600',
           child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_medium']!,
-            thumbnailUrl: _mediaUrls['thumb_2'],
+            url: _mediaUrls['image_1']!,
+            thumbnailUrl: _mediaUrls['thumb_1'],
             width: 280,
             height: 200,
-            caption: 'منظر طبيعي رائع من جبال الألب!',
+            fileSize: 150 * 1024, // ~150 KB
+            caption: 'منظر جبلي رائع من جبال الألب',
             showCaption: true,
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
+              showSpeed: true,
+              showFileSize: true,
               direction: BubbleDirection.outgoing,
             ),
           ),
@@ -216,18 +381,22 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
 
         const SizedBox(height: 12),
 
-        // Incoming image - small
+        // Image 2 - Nature
         _buildMessageRow(
           isOutgoing: false,
+          label: 'صورة طبيعة - تحميل حقيقي',
           child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_small']!,
-            thumbnailUrl: _mediaUrls['thumb_1'],
-            width: 250,
+            url: _mediaUrls['image_2']!,
+            thumbnailUrl: _mediaUrls['thumb_2'],
+            width: 260,
             height: 180,
+            fileSize: 120 * 1024,
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
+              showSpeed: true,
               direction: BubbleDirection.incoming,
             ),
           ),
@@ -235,61 +404,49 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
 
         const SizedBox(height: 12),
 
-        // Outgoing portrait image
+        // Image 3 - Beach
         _buildMessageRow(
           isOutgoing: true,
+          label: 'صورة شاطئ استوائي',
           child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_portrait']!,
-            width: 180,
-            height: 280,
-            caption: 'صورة عمودية جميلة',
+            url: _mediaUrls['image_3']!,
+            thumbnailUrl: _mediaUrls['thumb_3'],
+            width: 280,
+            height: 170,
+            fileSize: 180 * 1024,
+            caption: 'شاطئ استوائي جميل 🏖️',
             showCaption: true,
             themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming large landscape image
-        _buildMessageRow(
-          isOutgoing: false,
-          child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_landscape']!,
-            thumbnailUrl: _mediaUrls['thumb_3'],
-            width: 300,
-            height: 170,
-            fileSize: 2 * 1024 * 1024, // 2 MB
-            themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
               showFileSize: true,
-              direction: BubbleDirection.incoming,
+              direction: BubbleDirection.outgoing,
             ),
           ),
         ),
 
         const SizedBox(height: 12),
 
-        // Outgoing nature image with full screen enabled
+        // Image 4 - Forest
         _buildMessageRow(
-          isOutgoing: true,
+          isOutgoing: false,
+          label: 'صورة غابة',
           child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_nature']!,
-            width: 260,
+            url: _mediaUrls['image_4']!,
+            width: 250,
             height: 190,
+            fileSize: 200 * 1024,
             enableFullScreen: true,
-            caption: 'غابة استوائية مذهلة',
-            showCaption: true,
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
-              direction: BubbleDirection.outgoing,
+              showSpeed: true,
+              showEta: true,
+              direction: BubbleDirection.incoming,
             ),
           ),
         ),
@@ -297,12 +454,13 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
     );
   }
 
-  Widget _buildVideoMessages() {
+  Widget _buildRealVideoMessages() {
     return Column(
       children: [
-        // Outgoing video - short duration
+        // Video 1MB
         _buildMessageRow(
           isOutgoing: true,
+          label: 'فيديو 1 ميجا - Big Buck Bunny',
           child: VideoMessageTransferWidget(
             url: _mediaUrls['video_1mb']!,
             thumbnailUrl: _mediaUrls['thumb_1'],
@@ -310,10 +468,14 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             height: 160,
             duration: const Duration(minutes: 1, seconds: 30),
             fileSize: 1024 * 1024, // 1 MB
+            hasAudio: true,
+            showDuration: true,
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
+              showSpeed: true,
               showFileSize: true,
               direction: BubbleDirection.outgoing,
             ),
@@ -322,21 +484,25 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
 
         const SizedBox(height: 12),
 
-        // Incoming video - medium duration
+        // Video 2MB
         _buildMessageRow(
           isOutgoing: false,
+          label: 'فيديو 2 ميجا',
           child: VideoMessageTransferWidget(
-            url: _mediaUrls['video_5mb']!,
+            url: _mediaUrls['video_2mb']!,
             thumbnailUrl: _mediaUrls['thumb_2'],
             width: 260,
-            height: 180,
-            duration: const Duration(minutes: 5, seconds: 45),
+            height: 170,
+            duration: const Duration(minutes: 2, seconds: 45),
+            fileSize: 2 * 1024 * 1024,
             hasAudio: true,
-            fileSize: 5 * 1024 * 1024, // 5 MB
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
+              showActionButton: true,
               showSpeed: true,
+              showEta: true,
               direction: BubbleDirection.incoming,
             ),
           ),
@@ -344,514 +510,53 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
 
         const SizedBox(height: 12),
 
-        // Outgoing video - long duration
+        // Video 5MB
         _buildMessageRow(
           isOutgoing: true,
+          label: 'فيديو 5 ميجا - عالي الجودة',
           child: VideoMessageTransferWidget(
-            url: _mediaUrls['video_10mb']!,
+            url: _mediaUrls['video_5mb']!,
             thumbnailUrl: _mediaUrls['thumb_3'],
             width: 280,
             height: 158,
-            duration: const Duration(minutes: 10, seconds: 15),
+            duration: const Duration(minutes: 5, seconds: 15),
+            fileSize: 5 * 1024 * 1024,
             hasAudio: true,
             showDuration: true,
-            fileSize: 10 * 1024 * 1024, // 10 MB
             themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              showFileSize: true,
-              showSpeed: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming muted video
-        _buildMessageRow(
-          isOutgoing: false,
-          child: VideoMessageTransferWidget(
-            url: _mediaUrls['video_1mb']!,
-            thumbnailUrl: _mediaUrls['thumb_1'],
-            width: 240,
-            height: 135,
-            duration: const Duration(seconds: 45),
-            hasAudio: false,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAudioMessages() {
-    return Column(
-      children: [
-        // Outgoing voice message - short
-        _buildMessageRow(
-          isOutgoing: true,
-          child: AudioMessageTransferWidget(
-            url: _mediaUrls['audio_mp3']!,
-            duration: const Duration(seconds: 15),
-            waveform: _generateWaveform(30),
-            fileSize: 150 * 1024, // 150 KB
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming voice message - medium
-        _buildMessageRow(
-          isOutgoing: false,
-          child: AudioMessageTransferWidget(
-            url: _mediaUrls['audio_mp3']!,
-            duration: const Duration(minutes: 1, seconds: 30),
-            waveform: _generateWaveform(40),
-            fileSize: 900 * 1024, // 900 KB
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showFileSize: true,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Outgoing voice message - long
-        _buildMessageRow(
-          isOutgoing: true,
-          child: AudioMessageTransferWidget(
-            url: _mediaUrls['audio_wave']!,
-            duration: const Duration(minutes: 3, seconds: 45),
-            waveform: _generateWaveform(50),
-            animateWaveform: true,
-            fileSize: 2 * 1024 * 1024, // 2 MB
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              showSpeed: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming voice message with playback position
-        _buildMessageRow(
-          isOutgoing: false,
-          child: AudioMessageTransferWidget(
-            url: _mediaUrls['audio_mp3']!,
-            duration: const Duration(minutes: 2, seconds: 10),
-            waveform: _generateWaveform(35),
-            playbackPosition: const Duration(seconds: 45),
-            isPlaying: false,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFileMessages() {
-    return Column(
-      children: [
-        // Outgoing ZIP file
-        _buildMessageRow(
-          isOutgoing: true,
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['zip_file']!,
-            fileName: 'مشروع_البرمجة.zip',
-            fileSize: 1024 * 1024, // 1 MB
-            extension: 'ZIP',
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming Excel file
-        _buildMessageRow(
-          isOutgoing: false,
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'تقرير_المبيعات_الشهري.xlsx',
-            fileSize: 512 * 1024, // 512 KB
-            extension: 'XLSX',
-            iconColor: Colors.green,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Outgoing APK file
-        _buildMessageRow(
-          isOutgoing: true,
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['zip_large']!,
-            fileName: 'تطبيق_الموبايل_v2.0.apk',
-            fileSize: 45 * 1024 * 1024, // 45 MB
-            extension: 'APK',
-            iconColor: const Color(0xFF3DDC84),
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              showFileSize: true,
-              showSpeed: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming PowerPoint file
-        _buildMessageRow(
-          isOutgoing: false,
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'عرض_تقديمي_للمشروع.pptx',
-            fileSize: 8 * 1024 * 1024, // 8 MB
-            extension: 'PPTX',
-            iconColor: Colors.orange,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Outgoing code file
-        _buildMessageRow(
-          isOutgoing: true,
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['zip_file']!,
-            fileName: 'main.dart',
-            fileSize: 25 * 1024, // 25 KB
-            extension: 'DART',
-            iconColor: const Color(0xFF0175C2),
-            customIcon: Icons.code,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDocumentMessages() {
-    return Column(
-      children: [
-        // Outgoing small PDF
-        _buildMessageRow(
-          isOutgoing: true,
-          child: DocumentMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'عقد_العمل_الجديد.pdf',
-            fileSize: 150 * 1024, // 150 KB
-            pageCount: 5,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming large PDF
-        _buildMessageRow(
-          isOutgoing: false,
-          child: DocumentMessageTransferWidget(
-            url: _mediaUrls['pdf_large']!,
-            fileName: 'دليل_المستخدم_الشامل.pdf',
-            fileSize: 5 * 1024 * 1024, // 5 MB
-            pageCount: 120,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showSpeed: true,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Outgoing Word document
-        _buildMessageRow(
-          isOutgoing: true,
-          child: DocumentMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'تقرير_الأداء_السنوي.docx',
-            fileSize: 2 * 1024 * 1024, // 2 MB
-            pageCount: 35,
-            documentType: DocumentType.word,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              showFileSize: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Incoming Excel spreadsheet
-        _buildMessageRow(
-          isOutgoing: false,
-          child: DocumentMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'البيانات_المالية_2024.xlsx',
-            fileSize: 3 * 1024 * 1024, // 3 MB
-            pageCount: 15,
-            documentType: DocumentType.excel,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Outgoing PowerPoint presentation
-        _buildMessageRow(
-          isOutgoing: true,
-          child: DocumentMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'خطة_المشروع_2025.pptx',
-            fileSize: 15 * 1024 * 1024, // 15 MB
-            pageCount: 50,
-            documentType: DocumentType.powerpoint,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              showSpeed: true,
-              showFileSize: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTransferStatesDemo() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Description
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'أمثلة على حالات التحويل المختلفة:',
-            style: TextStyle(
-              color: _themeData.subtitleColor,
-              fontSize: 13,
-            ),
-          ),
-        ),
-
-        // Idle state - ready to download
-        _buildMessageRow(
-          isOutgoing: true,
-          label: 'جاهز للتحميل',
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['zip_file']!,
-            fileName: 'ملف_جاهز_للتحميل.zip',
-            fileSize: 5 * 1024 * 1024,
-            initialState: TransferWidgetState.idle,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Pending state
-        _buildMessageRow(
-          isOutgoing: false,
-          label: 'في الانتظار',
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['zip_file']!,
-            fileName: 'ملف_في_الانتظار.zip',
-            fileSize: 3 * 1024 * 1024,
-            initialState: TransferWidgetState.pending,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Completed state
-        _buildMessageRow(
-          isOutgoing: true,
-          label: 'مكتمل',
-          child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_small']!,
-            thumbnailUrl: _mediaUrls['thumb_1'],
-            width: 200,
-            height: 150,
-            initialState: TransferWidgetState.completed,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Failed state
-        _buildMessageRow(
-          isOutgoing: false,
-          label: 'فشل التحميل',
-          child: DocumentMessageTransferWidget(
-            url: 'https://invalid-url.example.com/file.pdf',
-            fileName: 'ملف_فاشل.pdf',
-            fileSize: 10 * 1024 * 1024,
-            initialState: TransferWidgetState.failed,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: false,
-              showActionButton: true,
-              allowRetry: true,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildConfigurationExamples() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Description
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'أمثلة على إعدادات مختلفة:',
-            style: TextStyle(
-              color: _themeData.subtitleColor,
-              fontSize: 13,
-            ),
-          ),
-        ),
-
-        // Auto-start enabled
-        _buildMessageRow(
-          isOutgoing: true,
-          label: 'تشغيل تلقائي',
-          child: ImageMessageTransferWidget(
-            url: _mediaUrls['image_small']!,
-            thumbnailUrl: _mediaUrls['thumb_1'],
-            width: 200,
-            height: 150,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              autoStart: true,
-              showActionButton: true,
-              showSpeed: true,
-              direction: BubbleDirection.outgoing,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // No action button
-        _buildMessageRow(
-          isOutgoing: false,
-          label: 'بدون زر إجراء',
-          child: FileMessageTransferWidget(
-            url: _mediaUrls['zip_file']!,
-            fileName: 'ملف_بدون_زر.zip',
-            fileSize: 2 * 1024 * 1024,
-            themeData: _themeData,
-            config: const TransferWidgetConfig(
-              showActionButton: false,
-              showFileSize: true,
-              direction: BubbleDirection.incoming,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // Show all info (speed, ETA, size)
-        _buildMessageRow(
-          isOutgoing: true,
-          label: 'عرض كل المعلومات',
-          child: VideoMessageTransferWidget(
-            url: _mediaUrls['video_5mb']!,
-            thumbnailUrl: _mediaUrls['thumb_2'],
-            width: 260,
-            height: 146,
-            duration: const Duration(minutes: 3),
-            fileSize: 5 * 1024 * 1024,
-            themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
               showSpeed: true,
               showFileSize: true,
               showEta: true,
-              showProgress: true,
+              direction: BubbleDirection.outgoing,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRealAudioMessages() {
+    return Column(
+      children: [
+        // Audio 1 - Crowd Cheering
+        _buildMessageRow(
+          isOutgoing: true,
+          label: 'صوت تشجيع الجمهور',
+          child: AudioMessageTransferWidget(
+            url: _mediaUrls['audio_1']!,
+            duration: const Duration(seconds: 27),
+            waveform: _generateWaveform(35),
+            fileSize: 432 * 1024,
+            themeData: _themeData,
+            onDownload: _createDownloadStream,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+              showSpeed: true,
               direction: BubbleDirection.outgoing,
             ),
           ),
@@ -859,43 +564,126 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
 
         const SizedBox(height: 12),
 
-        // Pause/Resume disabled
+        // Audio 2 - Wave Sound
         _buildMessageRow(
           isOutgoing: false,
-          label: 'إيقاف/استئناف معطل',
+          label: 'صوت أمواج البحر',
           child: AudioMessageTransferWidget(
-            url: _mediaUrls['audio_mp3']!,
-            duration: const Duration(minutes: 2),
-            waveform: _generateWaveform(35),
-            fileSize: 1024 * 1024,
+            url: _mediaUrls['audio_2']!,
+            duration: const Duration(minutes: 1, seconds: 12),
+            waveform: _generateWaveform(40),
+            fileSize: 980 * 1024,
+            animateWaveform: true,
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
-              allowPauseResume: false,
-              allowCancel: true,
+              showFileSize: true,
               direction: BubbleDirection.incoming,
             ),
           ),
         ),
+      ],
+    );
+  }
 
-        const SizedBox(height: 12),
-
-        // Custom action button size
+  Widget _buildRealFileMessages() {
+    return Column(
+      children: [
+        // ZIP 1MB
         _buildMessageRow(
           isOutgoing: true,
-          label: 'حجم زر مخصص',
-          child: DocumentMessageTransferWidget(
-            url: _mediaUrls['pdf_small']!,
-            fileName: 'ملف_بزر_كبير.pdf',
+          label: 'ملف مضغوط 1 ميجا',
+          child: FileMessageTransferWidget(
+            url: _mediaUrls['zip_1mb']!,
+            fileName: 'sample_archive.zip',
             fileSize: 1024 * 1024,
-            pageCount: 10,
+            extension: 'ZIP',
+            iconColor: Colors.orange,
             themeData: _themeData,
+            onDownload: _createDownloadStream,
             config: const TransferWidgetConfig(
               autoStart: false,
               showActionButton: true,
-              actionButtonSize: 60,
+              showSpeed: true,
+              showFileSize: true,
               direction: BubbleDirection.outgoing,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // ZIP 5MB
+        _buildMessageRow(
+          isOutgoing: false,
+          label: 'ملف مضغوط 5 ميجا',
+          child: FileMessageTransferWidget(
+            url: _mediaUrls['zip_5mb']!,
+            fileName: 'large_archive.zip',
+            fileSize: 5 * 1024 * 1024,
+            extension: 'ZIP',
+            iconColor: Colors.orange,
+            themeData: _themeData,
+            onDownload: _createDownloadStream,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+              showSpeed: true,
+              showFileSize: true,
+              showEta: true,
+              direction: BubbleDirection.incoming,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRealDocumentMessages() {
+    return Column(
+      children: [
+        // PDF Small
+        _buildMessageRow(
+          isOutgoing: true,
+          label: 'مستند PDF صغير',
+          child: DocumentMessageTransferWidget(
+            url: _mediaUrls['pdf_1']!,
+            fileName: 'table_document.pdf',
+            fileSize: 50 * 1024,
+            pageCount: 3,
+            themeData: _themeData,
+            onDownload: _createDownloadStream,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+              showSpeed: true,
+              direction: BubbleDirection.outgoing,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // PDF 5MB
+        _buildMessageRow(
+          isOutgoing: false,
+          label: 'مستند PDF كبير - 5 ميجا',
+          child: DocumentMessageTransferWidget(
+            url: _mediaUrls['pdf_2']!,
+            fileName: 'large_document.pdf',
+            fileSize: 5 * 1024 * 1024,
+            pageCount: 120,
+            themeData: _themeData,
+            onDownload: _createDownloadStream,
+            config: const TransferWidgetConfig(
+              autoStart: false,
+              showActionButton: true,
+              showSpeed: true,
+              showFileSize: true,
+              showEta: true,
+              direction: BubbleDirection.incoming,
             ),
           ),
         ),
@@ -918,15 +706,24 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: _themeData.subtitleColor.withOpacity(0.2),
+                color: Colors.green.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
               ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: _themeData.subtitleColor,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_download, size: 12, color: Colors.green[700]),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.green[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
