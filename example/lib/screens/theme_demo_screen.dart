@@ -18,9 +18,7 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
     final theme = _getThemeData();
 
     return Theme(
-      data: Theme.of(context).copyWith(
-        extensions: [theme],
-      ),
+      data: Theme.of(context).copyWith(extensions: [theme]),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('تخصيص الثيمات'),
@@ -57,28 +55,29 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
           children: [
             Text(
               'اختر الستايل',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: SocialSkin.values.map((skin) {
-                final isSelected = skin == _selectedSkin;
-                return ChoiceChip(
-                  label: Text(_getSkinName(skin)),
-                  selected: isSelected,
-                  onSelected: (_) => setState(() => _selectedSkin = skin),
-                  avatar: Icon(
-                    _getSkinIcon(skin),
-                    size: 18,
-                    color: isSelected ? Colors.white : _getSkinColor(skin),
-                  ),
-                  selectedColor: _getSkinColor(skin),
-                );
-              }).toList(),
+              children:
+                  SocialSkin.values.map((skin) {
+                    final isSelected = skin == _selectedSkin;
+                    return ChoiceChip(
+                      label: Text(_getSkinName(skin)),
+                      selected: isSelected,
+                      onSelected: (_) => setState(() => _selectedSkin = skin),
+                      avatar: Icon(
+                        _getSkinIcon(skin),
+                        size: 18,
+                        color: isSelected ? Colors.white : _getSkinColor(skin),
+                      ),
+                      selectedColor: _getSkinColor(skin),
+                    );
+                  }).toList(),
             ),
           ],
         ),
@@ -95,9 +94,9 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
           children: [
             Text(
               'معاينة الثيم',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -142,7 +141,9 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
                   child: LinearProgressIndicator(
                     value: 0.65,
                     backgroundColor: theme.progressBackgroundColor,
-                    valueColor: AlwaysStoppedAnimation(theme.progressForegroundColor),
+                    valueColor: AlwaysStoppedAnimation(
+                      theme.progressForegroundColor,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -196,9 +197,9 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
           children: [
             Text(
               'لوحة الألوان',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -236,19 +237,10 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
           Container(
             width: 16,
             height: 16,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-            ),
-          ),
+          Text(label, style: TextStyle(color: color, fontSize: 12)),
         ],
       ),
     );
@@ -263,9 +255,9 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
           children: [
             Text(
               'عينات الويدجت',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -285,9 +277,21 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildStatusBadge('جاري', theme.progressForegroundColor, Icons.downloading),
-                _buildStatusBadge('متوقف', theme.pausedColor, Icons.pause_circle),
-                _buildStatusBadge('مكتمل', theme.successColor, Icons.check_circle),
+                _buildStatusBadge(
+                  'جاري',
+                  theme.progressForegroundColor,
+                  Icons.downloading,
+                ),
+                _buildStatusBadge(
+                  'متوقف',
+                  theme.pausedColor,
+                  Icons.pause_circle,
+                ),
+                _buildStatusBadge(
+                  'مكتمل',
+                  theme.successColor,
+                  Icons.check_circle,
+                ),
                 _buildStatusBadge('فشل', theme.errorColor, Icons.error),
                 _buildStatusBadge('ملغي', Colors.grey, Icons.cancel),
               ],
@@ -298,8 +302,13 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
     );
   }
 
-  Widget _buildProgressSample(SocialTransferThemeData theme, double value, String label) {
-    final color = value >= 1.0 ? theme.successColor : theme.progressForegroundColor;
+  Widget _buildProgressSample(
+    SocialTransferThemeData theme,
+    double value,
+    String label,
+  ) {
+    final color =
+        value >= 1.0 ? theme.successColor : theme.progressForegroundColor;
 
     return Column(
       children: [
@@ -362,16 +371,24 @@ class _ThemeDemoScreenState extends State<ThemeDemoScreen> {
 
   SocialTransferThemeData _getThemeData() {
     return switch (_selectedSkin) {
-      SocialSkin.whatsapp => SocialTransferThemeData.whatsapp(isDark: _isDarkMode),
-      SocialSkin.telegram => SocialTransferThemeData.telegram(isDark: _isDarkMode),
-      SocialSkin.instagram => SocialTransferThemeData.instagram(isDark: _isDarkMode),
+      SocialSkin.whatsapp => SocialTransferThemeData.whatsapp(
+        isDark: _isDarkMode,
+      ),
+      SocialSkin.telegram => SocialTransferThemeData.telegram(
+        isDark: _isDarkMode,
+      ),
+      SocialSkin.instagram => SocialTransferThemeData.instagram(
+        isDark: _isDarkMode,
+      ),
       SocialSkin.custom => SocialTransferThemeData(
         skin: SocialSkin.custom,
         primaryColor: Colors.purple,
         secondaryColor: Colors.purpleAccent,
         bubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
-        outgoingBubbleColor: _isDarkMode ? Colors.purple.shade800 : Colors.purple.shade100,
-        incomingBubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+        outgoingBubbleColor:
+            _isDarkMode ? Colors.purple.shade800 : Colors.purple.shade100,
+        incomingBubbleColor:
+            _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
         progressBackgroundColor: Colors.purple.shade100,
         progressForegroundColor: Colors.purple,
         successColor: Colors.green,

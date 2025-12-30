@@ -25,7 +25,11 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
         actions: [
           TextButton.icon(
             onPressed: () => setState(() => _isRtl = !_isRtl),
-            icon: Icon(_isRtl ? Icons.format_textdirection_r_to_l : Icons.format_textdirection_l_to_r),
+            icon: Icon(
+              _isRtl
+                  ? Icons.format_textdirection_r_to_l
+                  : Icons.format_textdirection_l_to_r,
+            ),
             label: Text(_isRtl ? 'RTL' : 'LTR'),
           ),
         ],
@@ -72,7 +76,10 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.format_textdirection_r_to_l, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.format_textdirection_r_to_l,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'RTL Language Support',
@@ -111,7 +118,9 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
         child: Row(
           children: [
             Icon(
-              _isRtl ? Icons.format_textdirection_r_to_l : Icons.format_textdirection_l_to_r,
+              _isRtl
+                  ? Icons.format_textdirection_r_to_l
+                  : Icons.format_textdirection_l_to_r,
               size: 40,
               color: theme.colorScheme.onSecondaryContainer,
             ),
@@ -121,7 +130,9 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _isRtl ? 'الاتجاه من اليمين لليسار' : 'Direction: Left to Right',
+                    _isRtl
+                        ? 'الاتجاه من اليمين لليسار'
+                        : 'Direction: Left to Right',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSecondaryContainer,
@@ -133,7 +144,9 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                         ? 'جميع العناصر تتكيف تلقائياً'
                         : 'All elements adapt automatically',
                     style: TextStyle(
-                      color: theme.colorScheme.onSecondaryContainer.withOpacity(0.8),
+                      color: theme.colorScheme.onSecondaryContainer.withOpacity(
+                        0.8,
+                      ),
                     ),
                   ),
                 ],
@@ -174,9 +187,10 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                 constraints: const BoxConstraints(maxWidth: 280),
                 decoration: BoxDecoration(
                   color: whatsappTheme.outgoingBubbleColor,
-                  borderRadius: _isRtl
-                      ? whatsappTheme.incomingBubbleBorderRadius
-                      : whatsappTheme.outgoingBubbleBorderRadius,
+                  borderRadius:
+                      _isRtl
+                          ? whatsappTheme.incomingBubbleBorderRadius
+                          : whatsappTheme.outgoingBubbleBorderRadius,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,9 +222,10 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                 constraints: const BoxConstraints(maxWidth: 280),
                 decoration: BoxDecoration(
                   color: whatsappTheme.incomingBubbleColor,
-                  borderRadius: _isRtl
-                      ? whatsappTheme.outgoingBubbleBorderRadius
-                      : whatsappTheme.incomingBubbleBorderRadius,
+                  borderRadius:
+                      _isRtl
+                          ? whatsappTheme.outgoingBubbleBorderRadius
+                          : whatsappTheme.incomingBubbleBorderRadius,
                 ),
                 child: Text(
                   _isRtl ? 'هذه رسالة واردة' : 'This is an incoming message',
@@ -264,7 +279,9 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _isRtl ? '٦.٥ ميجابايت / ١٠ ميجابايت' : '6.5 MB / 10 MB',
+                            _isRtl
+                                ? '٦.٥ ميجابايت / ١٠ ميجابايت'
+                                : '6.5 MB / 10 MB',
                             style: theme.textTheme.bodySmall,
                           ),
                           Text(
@@ -290,17 +307,28 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
   }
 
   Widget _buildFileListDemo(ThemeData theme) {
-    final files = _isRtl
-        ? [
-            ('صورة_العطلة.jpg', '٢.٥ ميجابايت', Icons.image, Colors.blue),
-            ('فيديو_الحفلة.mp4', '٢٥ ميجابايت', Icons.videocam, Colors.purple),
-            ('تقرير_المشروع.pdf', '١.٢ ميجابايت', Icons.description, Colors.red),
-          ]
-        : [
-            ('vacation_photo.jpg', '2.5 MB', Icons.image, Colors.blue),
-            ('party_video.mp4', '25 MB', Icons.videocam, Colors.purple),
-            ('project_report.pdf', '1.2 MB', Icons.description, Colors.red),
-          ];
+    final files =
+        _isRtl
+            ? [
+              ('صورة_العطلة.jpg', '٢.٥ ميجابايت', Icons.image, Colors.blue),
+              (
+                'فيديو_الحفلة.mp4',
+                '٢٥ ميجابايت',
+                Icons.videocam,
+                Colors.purple,
+              ),
+              (
+                'تقرير_المشروع.pdf',
+                '١.٢ ميجابايت',
+                Icons.description,
+                Colors.red,
+              ),
+            ]
+            : [
+              ('vacation_photo.jpg', '2.5 MB', Icons.image, Colors.blue),
+              ('party_video.mp4', '25 MB', Icons.videocam, Colors.purple),
+              ('project_report.pdf', '1.2 MB', Icons.description, Colors.red),
+            ];
 
     return Card(
       child: Padding(
@@ -315,24 +343,26 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            ...files.map((file) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: file.$4.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(file.$3, color: file.$4),
+            ...files.map(
+              (file) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: file.$4.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  title: Text(file.$1),
-                  subtitle: Text(file.$2),
-                  trailing: Icon(
-                    Icons.download,
-                    color: theme.colorScheme.primary,
-                  ),
-                )),
+                  child: Icon(file.$3, color: file.$4),
+                ),
+                title: Text(file.$1),
+                subtitle: Text(file.$2),
+                trailing: Icon(
+                  Icons.download,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -360,8 +390,16 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildStatusBadge('جاري التحميل', Colors.blue, Icons.downloading),
-                  _buildStatusBadge('متوقف مؤقتاً', Colors.amber, Icons.pause_circle),
+                  _buildStatusBadge(
+                    'جاري التحميل',
+                    Colors.blue,
+                    Icons.downloading,
+                  ),
+                  _buildStatusBadge(
+                    'متوقف مؤقتاً',
+                    Colors.amber,
+                    Icons.pause_circle,
+                  ),
                   _buildStatusBadge('مكتمل', Colors.green, Icons.check_circle),
                   _buildStatusBadge('فشل', Colors.red, Icons.error),
                 ],
@@ -394,9 +432,17 @@ class _RtlSupportScreenState extends State<RtlSupportScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildStatusBadge('Downloading', Colors.blue, Icons.downloading),
+                  _buildStatusBadge(
+                    'Downloading',
+                    Colors.blue,
+                    Icons.downloading,
+                  ),
                   _buildStatusBadge('Paused', Colors.amber, Icons.pause_circle),
-                  _buildStatusBadge('Completed', Colors.green, Icons.check_circle),
+                  _buildStatusBadge(
+                    'Completed',
+                    Colors.green,
+                    Icons.check_circle,
+                  ),
                   _buildStatusBadge('Failed', Colors.red, Icons.error),
                 ],
               ),

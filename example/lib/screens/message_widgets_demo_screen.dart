@@ -8,10 +8,7 @@ import 'package:flutter/material.dart';
 class MessageWidgetsDemoScreen extends StatefulWidget {
   final SocialSkin currentSkin;
 
-  const MessageWidgetsDemoScreen({
-    super.key,
-    required this.currentSkin,
-  });
+  const MessageWidgetsDemoScreen({super.key, required this.currentSkin});
 
   @override
   State<MessageWidgetsDemoScreen> createState() =>
@@ -62,8 +59,7 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
     'audio_2': 'https://sample-videos.com/audio/mp3/wave.mp3',
 
     // Real Documents
-    'pdf_1':
-        'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
+    'pdf_1': 'https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf',
     'pdf_2': 'https://sample-videos.com/pdf/Sample-pdf-5mb.pdf',
 
     // Real Archives
@@ -118,37 +114,42 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
   Stream<TransferProgress> _createDownloadStream(DownloadPayload payload) {
     final controller = StreamController<TransferProgress>();
 
-    _controller.download(url: payload.url, fileName: payload.fileName).then(
-      (result) {
-        result.fold(
-          onSuccess: (stream) {
-            stream.listen(
-              (transfer) {
-                controller.add(TransferProgress(
-                  bytesTransferred: (transfer.progress * (payload.expectedSize ?? 1024 * 1024)).round(),
+    _controller.download(url: payload.url, fileName: payload.fileName).then((
+      result,
+    ) {
+      result.fold(
+        onSuccess: (stream) {
+          stream.listen(
+            (transfer) {
+              controller.add(
+                TransferProgress(
+                  bytesTransferred:
+                      (transfer.progress *
+                              (payload.expectedSize ?? 1024 * 1024))
+                          .round(),
                   totalBytes: payload.expectedSize ?? 1024 * 1024,
                   bytesPerSecond: transfer.speed,
                   status: _mapStatus(transfer.status),
                   errorMessage: transfer.isFailed ? 'فشل التحميل' : null,
-                ));
+                ),
+              );
 
-                if (transfer.isComplete || transfer.isFailed) {
-                  controller.close();
-                }
-              },
-              onError: (e) {
-                controller.addError(e);
+              if (transfer.isComplete || transfer.isFailed) {
                 controller.close();
-              },
-            );
-          },
-          onFailure: (error) {
-            controller.addError(error);
-            controller.close();
-          },
-        );
-      },
-    );
+              }
+            },
+            onError: (e) {
+              controller.addError(e);
+              controller.close();
+            },
+          );
+        },
+        onFailure: (error) {
+          controller.addError(error);
+          controller.close();
+        },
+      );
+    });
 
     return controller.stream;
   }
@@ -169,15 +170,15 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
         return TransferStatus.cancelled;
       case TransferStatusEntity.waitingToRetry:
         return TransferStatus.waitingToRetry;
+      default:
+        return TransferStatus.cancelled;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: Theme.of(context).copyWith(
-        extensions: [_themeData],
-      ),
+      data: Theme.of(context).copyWith(extensions: [_themeData]),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('تحميل حقيقي - ويدجت الرسائل'),
@@ -202,7 +203,10 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
-            Text('خطأ في التهيئة', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'خطأ في التهيئة',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -343,9 +347,9 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: _themeData.primaryColor,
-                ),
+              fontWeight: FontWeight.bold,
+              color: _themeData.primaryColor,
+            ),
           ),
         ],
       ),
@@ -713,7 +717,11 @@ class _MessageWidgetsDemoScreenState extends State<MessageWidgetsDemoScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.cloud_download, size: 12, color: Colors.green[700]),
+                  Icon(
+                    Icons.cloud_download,
+                    size: 12,
+                    color: Colors.green[700],
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     label,

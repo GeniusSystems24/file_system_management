@@ -111,14 +111,17 @@ class VideoPlayerConfig {
       aspectRatio: aspectRatio ?? this.aspectRatio,
       placeholder: placeholder ?? this.placeholder,
       allowFullScreen: allowFullScreen ?? this.allowFullScreen,
-      allowPlaybackSpeedChanging: allowPlaybackSpeedChanging ?? this.allowPlaybackSpeedChanging,
+      allowPlaybackSpeedChanging:
+          allowPlaybackSpeedChanging ?? this.allowPlaybackSpeedChanging,
       allowMuting: allowMuting ?? this.allowMuting,
       errorBuilder: errorBuilder ?? this.errorBuilder,
       progressColors: progressColors ?? this.progressColors,
       displayMode: displayMode ?? this.displayMode,
       showCloseButton: showCloseButton ?? this.showCloseButton,
-      hideStatusBarInFullscreen: hideStatusBarInFullscreen ?? this.hideStatusBarInFullscreen,
-      fullscreenBackgroundColor: fullscreenBackgroundColor ?? this.fullscreenBackgroundColor,
+      hideStatusBarInFullscreen:
+          hideStatusBarInFullscreen ?? this.hideStatusBarInFullscreen,
+      fullscreenBackgroundColor:
+          fullscreenBackgroundColor ?? this.fullscreenBackgroundColor,
     );
   }
 }
@@ -291,7 +294,7 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
   StreamSubscription<TransferProgress>? _downloadSubscription;
 
   SocialTransferThemeData get theme =>
-      widget.themeData ?? SocialTransferThemeData.whatsApp();
+      widget.themeData ?? SocialTransferThemeData.whatsapp();
 
   double get _width => widget.width ?? 320;
   double get _height => widget.height ?? 180;
@@ -391,7 +394,8 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
         _videoController = VideoPlayerController.file(File(_localFilePath!));
       } else {
         // Try playing from URL directly
-        _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+        _videoController =
+            VideoPlayerController.networkUrl(Uri.parse(widget.url));
       }
 
       await _videoController!.initialize();
@@ -401,7 +405,8 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
         autoPlay: widget.config.autoPlay,
         looping: widget.config.looping,
         showControls: widget.config.showControls,
-        aspectRatio: widget.config.aspectRatio ?? _videoController!.value.aspectRatio,
+        aspectRatio:
+            widget.config.aspectRatio ?? _videoController!.value.aspectRatio,
         allowFullScreen: widget.config.allowFullScreen,
         allowPlaybackSpeedChanging: widget.config.allowPlaybackSpeedChanging,
         allowMuting: widget.config.allowMuting,
@@ -433,7 +438,8 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
       _errorMessage = value.errorDescription ?? 'Playback error';
       _setState(VideoPlayerState.playbackError);
       widget.onError?.call(_errorMessage!);
-    } else if (value.position >= value.duration && value.duration.inMilliseconds > 0) {
+    } else if (value.position >= value.duration &&
+        value.duration.inMilliseconds > 0) {
       widget.onPlayComplete?.call();
     }
   }
@@ -455,7 +461,8 @@ class _VideoDownloadPlayerWidgetState extends State<VideoDownloadPlayerWidget> {
           return _FullscreenVideoPlayer(
             url: widget.url,
             localPath: _localFilePath,
-            title: widget.title ?? widget.fileName ?? _extractFileName(widget.url),
+            title:
+                widget.title ?? widget.fileName ?? _extractFileName(widget.url),
             subtitle: widget.subtitle,
             duration: widget.duration,
             config: widget.config,
@@ -960,7 +967,7 @@ class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
   bool _showControls = true;
 
   SocialTransferThemeData get theme =>
-      widget.themeData ?? SocialTransferThemeData.whatsApp();
+      widget.themeData ?? SocialTransferThemeData.whatsapp();
 
   @override
   void initState() {
@@ -990,7 +997,8 @@ class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
       if (widget.localPath != null && File(widget.localPath!).existsSync()) {
         _videoController = VideoPlayerController.file(File(widget.localPath!));
       } else {
-        _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+        _videoController =
+            VideoPlayerController.networkUrl(Uri.parse(widget.url));
       }
 
       await _videoController!.initialize();
@@ -1000,16 +1008,18 @@ class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
         autoPlay: true,
         looping: widget.config.looping,
         showControls: false, // We use custom controls
-        aspectRatio: widget.config.aspectRatio ?? _videoController!.value.aspectRatio,
+        aspectRatio:
+            widget.config.aspectRatio ?? _videoController!.value.aspectRatio,
         allowFullScreen: false, // Already fullscreen
         allowPlaybackSpeedChanging: widget.config.allowPlaybackSpeedChanging,
         allowMuting: widget.config.allowMuting,
-        materialProgressColors: widget.config.progressColors ?? ChewieProgressColors(
-          playedColor: theme.primaryColor,
-          handleColor: theme.primaryColor,
-          bufferedColor: theme.primaryColor.withOpacity(0.3),
-          backgroundColor: Colors.white24,
-        ),
+        materialProgressColors: widget.config.progressColors ??
+            ChewieProgressColors(
+              playedColor: theme.primaryColor,
+              handleColor: theme.primaryColor,
+              bufferedColor: theme.primaryColor.withOpacity(0.3),
+              backgroundColor: Colors.white24,
+            ),
       );
 
       _videoController!.addListener(_onVideoStateChanged);
@@ -1031,9 +1041,11 @@ class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
     final value = _videoController!.value;
 
     if (value.hasError) {
-      setState(() => _errorMessage = value.errorDescription ?? 'Playback error');
+      setState(
+          () => _errorMessage = value.errorDescription ?? 'Playback error');
       widget.onError?.call(_errorMessage!);
-    } else if (value.position >= value.duration && value.duration.inMilliseconds > 0) {
+    } else if (value.position >= value.duration &&
+        value.duration.inMilliseconds > 0) {
       widget.onPlayComplete?.call();
     }
   }
@@ -1282,11 +1294,13 @@ class _FullscreenVideoPlayerState extends State<_FullscreenVideoPlayer> {
                           ),
                           child: Slider(
                             value: duration.inMilliseconds > 0
-                                ? position.inMilliseconds / duration.inMilliseconds
+                                ? position.inMilliseconds /
+                                    duration.inMilliseconds
                                 : 0,
                             onChanged: (value) {
                               final newPosition = Duration(
-                                milliseconds: (value * duration.inMilliseconds).round(),
+                                milliseconds:
+                                    (value * duration.inMilliseconds).round(),
                               );
                               _videoController!.seekTo(newPosition);
                             },

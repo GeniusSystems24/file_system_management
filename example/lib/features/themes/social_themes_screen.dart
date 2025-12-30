@@ -17,9 +17,15 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
 
   SocialTransferThemeData get _currentTheme {
     return switch (_selectedSkin) {
-      SocialSkin.whatsapp => SocialTransferThemeData.whatsapp(isDark: _isDarkMode),
-      SocialSkin.telegram => SocialTransferThemeData.telegram(isDark: _isDarkMode),
-      SocialSkin.instagram => SocialTransferThemeData.instagram(isDark: _isDarkMode),
+      SocialSkin.whatsapp => SocialTransferThemeData.whatsapp(
+        isDark: _isDarkMode,
+      ),
+      SocialSkin.telegram => SocialTransferThemeData.telegram(
+        isDark: _isDarkMode,
+      ),
+      SocialSkin.instagram => SocialTransferThemeData.instagram(
+        isDark: _isDarkMode,
+      ),
       SocialSkin.custom => _buildCustomTheme(),
     };
   }
@@ -30,8 +36,10 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
       primaryColor: Colors.deepPurple,
       secondaryColor: Colors.deepPurpleAccent,
       bubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
-      outgoingBubbleColor: _isDarkMode ? Colors.deepPurple.shade800 : Colors.deepPurple.shade50,
-      incomingBubbleColor: _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+      outgoingBubbleColor:
+          _isDarkMode ? Colors.deepPurple.shade800 : Colors.deepPurple.shade50,
+      incomingBubbleColor:
+          _isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
       progressBackgroundColor: Colors.deepPurple.shade100,
       progressForegroundColor: Colors.deepPurple,
       successColor: Colors.green,
@@ -54,11 +62,10 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
     final theme = _currentTheme;
 
     return Theme(
-      data: Theme.of(context).copyWith(
-        extensions: [theme],
-      ),
+      data: Theme.of(context).copyWith(extensions: [theme]),
       child: Scaffold(
-        backgroundColor: _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
+        backgroundColor:
+            _isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
         appBar: AppBar(
           title: const Text('Social Media Themes'),
           actions: [
@@ -109,18 +116,30 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
           children: [
             Text(
               'Select Theme',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
               runSpacing: 12,
               children: [
-                _buildThemeChip(SocialSkin.whatsapp, 'WhatsApp', const Color(0xFF25D366)),
-                _buildThemeChip(SocialSkin.telegram, 'Telegram', const Color(0xFF0088CC)),
-                _buildThemeChip(SocialSkin.instagram, 'Instagram', const Color(0xFFE1306C)),
+                _buildThemeChip(
+                  SocialSkin.whatsapp,
+                  'WhatsApp',
+                  const Color(0xFF25D366),
+                ),
+                _buildThemeChip(
+                  SocialSkin.telegram,
+                  'Telegram',
+                  const Color(0xFF0088CC),
+                ),
+                _buildThemeChip(
+                  SocialSkin.instagram,
+                  'Instagram',
+                  const Color(0xFFE1306C),
+                ),
                 _buildThemeChip(SocialSkin.custom, 'Custom', Colors.deepPurple),
               ],
             ),
@@ -139,10 +158,7 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
       avatar: Container(
         width: 16,
         height: 16,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
       onSelected: (_) => setState(() => _selectedSkin = skin),
       selectedColor: color.withOpacity(0.2),
@@ -159,10 +175,14 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
     };
 
     final skinDescription = switch (_selectedSkin) {
-      SocialSkin.whatsapp => 'Clean, minimalist design with green accents. Rounded bubbles with subtle shadows.',
-      SocialSkin.telegram => 'Blue-themed design with rounded corners. Includes speed and ETA display.',
-      SocialSkin.instagram => 'Modern gradient-inspired design. Circular progress indicators.',
-      SocialSkin.custom => 'Fully customizable theme. Define your own colors, shapes, and behavior.',
+      SocialSkin.whatsapp =>
+        'Clean, minimalist design with green accents. Rounded bubbles with subtle shadows.',
+      SocialSkin.telegram =>
+        'Blue-themed design with rounded corners. Includes speed and ETA display.',
+      SocialSkin.instagram =>
+        'Modern gradient-inspired design. Circular progress indicators.',
+      SocialSkin.custom =>
+        'Fully customizable theme. Define your own colors, shapes, and behavior.',
     };
 
     return Card(
@@ -184,9 +204,9 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
                 const SizedBox(width: 12),
                 Text(
                   skinName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -207,9 +227,9 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
           children: [
             Text(
               'Message Bubbles Preview',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -237,7 +257,9 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
                       child: LinearProgressIndicator(
                         value: 0.65,
                         backgroundColor: theme.progressBackgroundColor,
-                        valueColor: AlwaysStoppedAnimation(theme.progressForegroundColor),
+                        valueColor: AlwaysStoppedAnimation(
+                          theme.progressForegroundColor,
+                        ),
                       ),
                     ),
                   ],
@@ -278,9 +300,9 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
           children: [
             Text(
               'Color Palette',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -347,9 +369,9 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
           children: [
             Text(
               'Status Indicators',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -369,9 +391,21 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildStatusBadge('Running', theme.progressForegroundColor, Icons.downloading),
-                _buildStatusBadge('Paused', theme.pausedColor, Icons.pause_circle),
-                _buildStatusBadge('Complete', theme.successColor, Icons.check_circle),
+                _buildStatusBadge(
+                  'Running',
+                  theme.progressForegroundColor,
+                  Icons.downloading,
+                ),
+                _buildStatusBadge(
+                  'Paused',
+                  theme.pausedColor,
+                  Icons.pause_circle,
+                ),
+                _buildStatusBadge(
+                  'Complete',
+                  theme.successColor,
+                  Icons.check_circle,
+                ),
                 _buildStatusBadge('Failed', theme.errorColor, Icons.error),
               ],
             ),
@@ -381,8 +415,13 @@ class _SocialThemesScreenState extends State<SocialThemesScreen> {
     );
   }
 
-  Widget _buildProgressSample(SocialTransferThemeData theme, double value, String label) {
-    final color = value >= 1.0 ? theme.successColor : theme.progressForegroundColor;
+  Widget _buildProgressSample(
+    SocialTransferThemeData theme,
+    double value,
+    String label,
+  ) {
+    final color =
+        value >= 1.0 ? theme.successColor : theme.progressForegroundColor;
 
     return Column(
       children: [

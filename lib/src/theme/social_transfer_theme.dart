@@ -344,12 +344,12 @@ class SocialTransferThemeData extends ThemeExtension<SocialTransferThemeData> {
     this.showCircularProgress = true,
     this.useBlurOverlay = true,
     this.blurSigma = 8.0,
-  }) : incomingBubbleColor = incomingBubbleColor ?? bubbleColor,
-       outgoingBubbleColor = outgoingBubbleColor ?? bubbleColor,
-       incomingBubbleBorderRadius =
-           incomingBubbleBorderRadius ?? bubbleBorderRadius,
-       outgoingBubbleBorderRadius =
-           outgoingBubbleBorderRadius ?? bubbleBorderRadius;
+  })  : incomingBubbleColor = incomingBubbleColor ?? bubbleColor,
+        outgoingBubbleColor = outgoingBubbleColor ?? bubbleColor,
+        incomingBubbleBorderRadius =
+            incomingBubbleBorderRadius ?? bubbleBorderRadius,
+        outgoingBubbleBorderRadius =
+            outgoingBubbleBorderRadius ?? bubbleBorderRadius;
 
   /// Creates a WhatsApp-inspired theme.
   factory SocialTransferThemeData.whatsapp({bool isDark = false}) {
@@ -829,18 +829,16 @@ class SocialTransferThemeData extends ThemeExtension<SocialTransferThemeData> {
           Color.lerp(incomingBubbleColor, other.incomingBubbleColor, t)!,
       outgoingBubbleColor:
           Color.lerp(outgoingBubbleColor, other.outgoingBubbleColor, t)!,
-      progressBackgroundColor:
-          Color.lerp(
-            progressBackgroundColor,
-            other.progressBackgroundColor,
-            t,
-          )!,
-      progressForegroundColor:
-          Color.lerp(
-            progressForegroundColor,
-            other.progressForegroundColor,
-            t,
-          )!,
+      progressBackgroundColor: Color.lerp(
+        progressBackgroundColor,
+        other.progressBackgroundColor,
+        t,
+      )!,
+      progressForegroundColor: Color.lerp(
+        progressForegroundColor,
+        other.progressForegroundColor,
+        t,
+      )!,
       successColor: Color.lerp(successColor, other.successColor, t)!,
       errorColor: Color.lerp(errorColor, other.errorColor, t)!,
       warningColor: Color.lerp(warningColor, other.warningColor, t)!,
@@ -851,32 +849,28 @@ class SocialTransferThemeData extends ThemeExtension<SocialTransferThemeData> {
       overlayColor: Color.lerp(overlayColor, other.overlayColor, t)!,
       bubbleBorderRadius:
           BorderRadius.lerp(bubbleBorderRadius, other.bubbleBorderRadius, t)!,
-      incomingBubbleBorderRadius:
-          BorderRadius.lerp(
-            incomingBubbleBorderRadius,
-            other.incomingBubbleBorderRadius,
-            t,
-          )!,
-      outgoingBubbleBorderRadius:
-          BorderRadius.lerp(
-            outgoingBubbleBorderRadius,
-            other.outgoingBubbleBorderRadius,
-            t,
-          )!,
-      progressBorderRadius:
-          BorderRadius.lerp(
-            progressBorderRadius,
-            other.progressBorderRadius,
-            t,
-          )!,
+      incomingBubbleBorderRadius: BorderRadius.lerp(
+        incomingBubbleBorderRadius,
+        other.incomingBubbleBorderRadius,
+        t,
+      )!,
+      outgoingBubbleBorderRadius: BorderRadius.lerp(
+        outgoingBubbleBorderRadius,
+        other.outgoingBubbleBorderRadius,
+        t,
+      )!,
+      progressBorderRadius: BorderRadius.lerp(
+        progressBorderRadius,
+        other.progressBorderRadius,
+        t,
+      )!,
       buttonBorderRadius:
           BorderRadius.lerp(buttonBorderRadius, other.buttonBorderRadius, t)!,
-      thumbnailBorderRadius:
-          BorderRadius.lerp(
-            thumbnailBorderRadius,
-            other.thumbnailBorderRadius,
-            t,
-          )!,
+      thumbnailBorderRadius: BorderRadius.lerp(
+        thumbnailBorderRadius,
+        other.thumbnailBorderRadius,
+        t,
+      )!,
       bubbleBorder: t < 0.5 ? bubbleBorder : other.bubbleBorder,
       bubbleShadow: t < 0.5 ? bubbleShadow : other.bubbleShadow,
       actionButtonSize:

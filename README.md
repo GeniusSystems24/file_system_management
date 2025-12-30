@@ -497,7 +497,7 @@ await FullscreenVideoPlayer.open(
     autoPlay: true,
     looping: true,
   ),
-  themeData: SocialTransferThemeData.whatsApp(),
+  themeData: SocialTransferThemeData.whatsapp(),
 );
 
 // Or as a widget

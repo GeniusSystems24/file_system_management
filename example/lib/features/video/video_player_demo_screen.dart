@@ -21,16 +21,20 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
   static const _sampleVideos = [
     _VideoSample(
       title: 'Big Buck Bunny',
-      url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg',
+      url:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      thumbnailUrl:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg',
       duration: Duration(minutes: 9, seconds: 56),
       fileSize: 158008374, // ~150 MB
       description: 'A large rabbit deals with three bullying rodents.',
     ),
     _VideoSample(
       title: 'Elephant Dream',
-      url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg',
+      url:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      thumbnailUrl:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg',
       duration: Duration(minutes: 10, seconds: 53),
       fileSize: 168943616, // ~161 MB
       description: 'Two friends explore a weird mechanical world.',
@@ -38,31 +42,38 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
     _VideoSample(
       title: 'Sintel',
       url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-      thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg',
+      thumbnailUrl:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg',
       duration: Duration(minutes: 14, seconds: 48),
       fileSize: 190612480, // ~182 MB
       description: 'A girl searches for her baby dragon.',
     ),
     _VideoSample(
       title: 'Tears of Steel',
-      url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-      thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg',
+      url:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+      thumbnailUrl:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg',
       duration: Duration(minutes: 12, seconds: 14),
       fileSize: 185267200, // ~177 MB
       description: 'A group of warriors try to save the world.',
     ),
     _VideoSample(
       title: 'For Bigger Fun',
-      url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg',
+      url:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+      thumbnailUrl:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg',
       duration: Duration(seconds: 15),
       fileSize: 1540096, // ~1.5 MB
       description: 'Short video clip for quick testing.',
     ),
     _VideoSample(
       title: 'For Bigger Blazes',
-      url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnailUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg',
+      url:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      thumbnailUrl:
+          'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg',
       duration: Duration(seconds: 15),
       fileSize: 1068564, // ~1 MB
       description: 'Another short video clip.',
@@ -101,13 +112,13 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
   SocialTransferThemeData get _themeData {
     switch (_currentSkin) {
       case SocialSkin.whatsapp:
-        return SocialTransferThemeData.whatsApp();
+        return SocialTransferThemeData.whatsapp();
       case SocialSkin.telegram:
         return SocialTransferThemeData.telegram();
       case SocialSkin.instagram:
         return SocialTransferThemeData.instagram();
       case SocialSkin.custom:
-        return SocialTransferThemeData.custom(
+        return SocialTransferThemeData.whatsapp().copyWith(
           primaryColor: Colors.deepPurple,
           bubbleColor: Colors.deepPurple.shade50,
         );
@@ -119,39 +130,41 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
 
     TransferController.instance
         .download(url: payload.url, fileName: payload.fileName)
-        .then(
-      (result) {
-        result.fold(
-          onSuccess: (stream) {
-            stream.listen(
-              (transfer) {
-                controller.add(TransferProgress(
-                  bytesTransferred:
-                      (transfer.progress * (payload.expectedSize ?? 1024 * 1024))
-                          .round(),
-                  totalBytes: payload.expectedSize ?? 1024 * 1024,
-                  bytesPerSecond: transfer.speed,
-                  status: _mapStatus(transfer.status),
-                  errorMessage: transfer.isFailed ? 'Download failed' : null,
-                ));
+        .then((result) {
+          result.fold(
+            onSuccess: (stream) {
+              stream.listen(
+                (transfer) {
+                  controller.add(
+                    TransferProgress(
+                      bytesTransferred:
+                          (transfer.progress *
+                                  (payload.expectedSize ?? 1024 * 1024))
+                              .round(),
+                      totalBytes: payload.expectedSize ?? 1024 * 1024,
+                      bytesPerSecond: transfer.speed,
+                      status: _mapStatus(transfer.status),
+                      errorMessage:
+                          transfer.isFailed ? 'Download failed' : null,
+                    ),
+                  );
 
-                if (transfer.isComplete || transfer.isFailed) {
+                  if (transfer.isComplete || transfer.isFailed) {
+                    controller.close();
+                  }
+                },
+                onError: (e) {
+                  controller.addError(e);
                   controller.close();
-                }
-              },
-              onError: (e) {
-                controller.addError(e);
-                controller.close();
-              },
-            );
-          },
-          onFailure: (error) {
-            controller.addError(error);
-            controller.close();
-          },
-        );
-      },
-    );
+                },
+              );
+            },
+            onFailure: (error) {
+              controller.addError(error);
+              controller.close();
+            },
+          );
+        });
 
     return controller.stream;
   }
@@ -172,15 +185,15 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
         return TransferStatus.cancelled;
       case TransferStatusEntity.waitingToRetry:
         return TransferStatus.waitingToRetry;
+      default:
+        return TransferStatus.cancelled;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: Theme.of(context).copyWith(
-        extensions: [_themeData],
-      ),
+      data: Theme.of(context).copyWith(extensions: [_themeData]),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Video Player Demo'),
@@ -196,21 +209,23 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
             PopupMenuButton<SocialSkin>(
               icon: const Icon(Icons.palette),
               onSelected: (skin) => setState(() => _currentSkin = skin),
-              itemBuilder: (context) => SocialSkin.values.map((skin) {
-                return PopupMenuItem(
-                  value: skin,
-                  child: Row(
-                    children: [
-                      if (skin == _currentSkin)
-                        const Icon(Icons.check, size: 18)
-                      else
-                        const SizedBox(width: 18),
-                      const SizedBox(width: 8),
-                      Text(skin.name.toUpperCase()),
-                    ],
-                  ),
-                );
-              }).toList(),
+              itemBuilder:
+                  (context) =>
+                      SocialSkin.values.map((skin) {
+                        return PopupMenuItem(
+                          value: skin,
+                          child: Row(
+                            children: [
+                              if (skin == _currentSkin)
+                                const Icon(Icons.check, size: 18)
+                              else
+                                const SizedBox(width: 18),
+                              const SizedBox(width: 8),
+                              Text(skin.name.toUpperCase()),
+                            ],
+                          ),
+                        );
+                      }).toList(),
             ),
           ],
         ),
@@ -281,23 +296,30 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
 
         ..._sampleVideos
             .where((v) => v.fileSize < 5000000) // Less than 5 MB
-            .map((video) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildVideoCard(video),
-                )),
+            .map(
+              (video) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildVideoCard(video),
+              ),
+            ),
 
         const SizedBox(height: 24),
 
         // Full videos (larger files)
-        _buildSubsectionHeader('Full Videos', 'Larger files with full features'),
+        _buildSubsectionHeader(
+          'Full Videos',
+          'Larger files with full features',
+        ),
         const SizedBox(height: 12),
 
         ..._sampleVideos
             .where((v) => v.fileSize >= 5000000) // 5 MB and above
-            .map((video) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildVideoCard(video),
-                )),
+            .map(
+              (video) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildVideoCard(video),
+              ),
+            ),
 
         const SizedBox(height: 24),
 
@@ -400,10 +422,7 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -421,10 +440,7 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             Text(
               subtitle,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
@@ -492,16 +508,16 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                 const SizedBox(height: 4),
                 Text(
                   video.description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [
-                    _buildInfoChip(Icons.timer, _formatDuration(video.duration)),
+                    _buildInfoChip(
+                      Icons.timer,
+                      _formatDuration(video.duration),
+                    ),
                     _buildInfoChip(Icons.storage, _formatBytes(video.fileSize)),
                   ],
                 ),
@@ -527,17 +543,11 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             Text(
               description,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 16),
             ClipRRect(
@@ -548,7 +558,8 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                 child: VideoDownloadPlayerWidget(
                   url: video.url,
                   thumbnailUrl: video.thumbnailUrl,
-                  fileName: '${title.toLowerCase().replaceAll(' ', '_')}_${video.title.replaceAll(' ', '_')}.mp4',
+                  fileName:
+                      '${title.toLowerCase().replaceAll(' ', '_')}_${video.title.replaceAll(' ', '_')}.mp4',
                   fileSize: video.fileSize,
                   duration: video.duration,
                   config: config,
@@ -586,7 +597,11 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                     color: _themeData.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(modeIcon, color: _themeData.primaryColor, size: 20),
+                  child: Icon(
+                    modeIcon,
+                    color: _themeData.primaryColor,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -621,15 +636,13 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                 child: VideoDownloadPlayerWidget(
                   url: video.url,
                   thumbnailUrl: video.thumbnailUrl,
-                  fileName: '${mode.name}_${video.title.replaceAll(' ', '_')}.mp4',
+                  fileName:
+                      '${mode.name}_${video.title.replaceAll(' ', '_')}.mp4',
                   fileSize: video.fileSize,
                   duration: video.duration,
                   title: video.title,
                   subtitle: video.description,
-                  config: VideoPlayerConfig(
-                    displayMode: mode,
-                    autoPlay: true,
-                  ),
+                  config: VideoPlayerConfig(displayMode: mode, autoPlay: true),
                   themeData: _themeData,
                   width: double.infinity,
                   height: 180,
@@ -644,9 +657,10 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: mode == VideoDisplayMode.fullscreen
-                    ? Colors.blue.shade50
-                    : Colors.green.shade50,
+                color:
+                    mode == VideoDisplayMode.fullscreen
+                        ? Colors.blue.shade50
+                        : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -657,9 +671,10 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                         ? Icons.touch_app
                         : Icons.play_circle,
                     size: 16,
-                    color: mode == VideoDisplayMode.fullscreen
-                        ? Colors.blue.shade700
-                        : Colors.green.shade700,
+                    color:
+                        mode == VideoDisplayMode.fullscreen
+                            ? Colors.blue.shade700
+                            : Colors.green.shade700,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -668,9 +683,10 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
                         : 'Tap to play inline',
                     style: TextStyle(
                       fontSize: 12,
-                      color: mode == VideoDisplayMode.fullscreen
-                          ? Colors.blue.shade700
-                          : Colors.green.shade700,
+                      color:
+                          mode == VideoDisplayMode.fullscreen
+                              ? Colors.blue.shade700
+                              : Colors.green.shade700,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -697,10 +713,7 @@ class _VideoPlayerDemoScreenState extends State<VideoPlayerDemoScreen> {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           ),
         ],
       ),
