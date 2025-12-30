@@ -15,6 +15,8 @@ A comprehensive Flutter package for managing file transfers with progress tracki
 | **Queue Management** | Control concurrent transfers with priority queuing |
 | **Batch Operations** | Download/upload multiple files efficiently |
 | **Message Widgets** | Ready-to-use widgets for chat applications |
+| **Video Player** | Download and play videos with Chewie integration |
+| **Display Modes** | Inline or fullscreen playback (like Telegram) |
 | **Social Media Themes** | WhatsApp, Telegram, Instagram-inspired designs |
 | **Injectable Handlers** | Use your own upload/download providers |
 | **Background Downloads** | Continue downloads when app is in background |
@@ -43,12 +45,13 @@ A comprehensive Flutter package for managing file transfers with progress tracki
   - [Scenario 2: Parallel Downloads](#scenario-2-parallel-downloads)
   - [Scenario 3: Batch Operations](#scenario-3-batch-operations)
   - [Scenario 4: Chat Application with Message Widgets](#scenario-4-chat-application-with-message-widgets)
-  - [Scenario 5: Queue Management](#scenario-5-queue-management)
-  - [Scenario 6: Upload Operations](#scenario-6-upload-operations)
-  - [Scenario 7: Database & Task Management](#scenario-7-database--task-management)
-  - [Scenario 8: Shared Storage](#scenario-8-shared-storage)
-  - [Scenario 9: Permissions Handling](#scenario-9-permissions-handling)
-  - [Scenario 10: Social Media Theming](#scenario-10-social-media-theming)
+  - [Scenario 5: Video Download & Player](#scenario-5-video-download--player)
+  - [Scenario 6: Queue Management](#scenario-6-queue-management)
+  - [Scenario 7: Upload Operations](#scenario-7-upload-operations)
+  - [Scenario 8: Database & Task Management](#scenario-8-database--task-management)
+  - [Scenario 9: Shared Storage](#scenario-9-shared-storage)
+  - [Scenario 10: Permissions Handling](#scenario-10-permissions-handling)
+  - [Scenario 11: Social Media Theming](#scenario-11-social-media-theming)
 - [API Reference](#api-reference)
 - [Example App](#example-app)
 - [Migration Guide](#migration-guide)
@@ -430,7 +433,112 @@ DocumentMessageTransferWidget(
 )
 ```
 
-### Scenario 5: Queue Management
+### Scenario 5: Video Download & Player
+
+Download videos with progress tracking and play them with a beautiful player:
+
+#### Inline Mode (Default)
+
+Play videos within the widget, like WhatsApp:
+
+```dart
+VideoDownloadPlayerWidget(
+  url: 'https://example.com/video.mp4',
+  thumbnailUrl: 'https://example.com/thumb.jpg',
+  fileName: 'video.mp4',
+  fileSize: 10 * 1024 * 1024, // 10 MB
+  duration: Duration(minutes: 2, seconds: 30),
+  config: VideoPlayerConfig(
+    displayMode: VideoDisplayMode.inline,
+    autoPlay: true,
+    showControls: true,
+    looping: false,
+  ),
+  themeData: SocialTransferThemeData.telegram(),
+  onDownload: (payload) => downloadService.download(payload),
+  onDownloadComplete: (path) => print('Downloaded: $path'),
+  onPlayStart: () => print('Video started'),
+  onPlayComplete: () => print('Video finished'),
+)
+```
+
+#### Fullscreen Mode (Like Telegram)
+
+Open a dedicated fullscreen player when tapped:
+
+```dart
+VideoDownloadPlayerWidget(
+  url: 'https://example.com/video.mp4',
+  thumbnailUrl: 'https://example.com/thumb.jpg',
+  title: 'My Video',
+  subtitle: 'Video description',
+  config: VideoPlayerConfig(
+    displayMode: VideoDisplayMode.fullscreen,  // Opens fullscreen player
+    autoPlay: true,
+    showCloseButton: true,
+    hideStatusBarInFullscreen: true,
+  ),
+  onDownload: (payload) => downloadService.download(payload),
+)
+```
+
+#### Direct Fullscreen Player
+
+Open fullscreen player programmatically:
+
+```dart
+// Using static method
+await FullscreenVideoPlayer.open(
+  context,
+  url: 'https://example.com/video.mp4',
+  title: 'Video Title',
+  subtitle: 'Video description',
+  config: VideoPlayerConfig(
+    autoPlay: true,
+    looping: true,
+  ),
+  themeData: SocialTransferThemeData.whatsApp(),
+);
+
+// Or as a widget
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => FullscreenVideoPlayer(
+      url: 'https://example.com/video.mp4',
+      title: 'My Video',
+    ),
+  ),
+);
+```
+
+#### Video Player Configuration
+
+```dart
+VideoPlayerConfig(
+  // Display Mode
+  displayMode: VideoDisplayMode.inline,     // or .fullscreen
+
+  // Playback
+  autoStartDownload: false,                 // Auto-start download
+  autoPlay: true,                           // Auto-play after download
+  looping: false,                           // Loop video
+  showControls: true,                       // Show player controls
+
+  // Fullscreen Options
+  showCloseButton: true,                    // Show close button
+  hideStatusBarInFullscreen: true,          // Hide status bar
+  fullscreenBackgroundColor: Colors.black,  // Background color
+
+  // Advanced
+  aspectRatio: 16 / 9,                      // Custom aspect ratio
+  allowFullScreen: true,                    // Allow fullscreen toggle
+  allowPlaybackSpeedChanging: true,         // Speed controls
+  allowMuting: true,                        // Mute controls
+)
+```
+
+### Scenario 6: Queue Management
 
 Control concurrent downloads with priority queuing:
 
@@ -495,7 +603,7 @@ await provider.resumeDownload('https://example.com/file.zip');
 provider.cancel('https://example.com/file.zip');
 ```
 
-### Scenario 6: Upload Operations
+### Scenario 7: Upload Operations
 
 #### Standard Upload (Multipart)
 
@@ -575,7 +683,7 @@ final task = createUploadTask(
 );
 ```
 
-### Scenario 7: Database & Task Management
+### Scenario 8: Database & Task Management
 
 #### Resume Failed Downloads
 
@@ -668,7 +776,7 @@ final task = await controller.getTaskById('task-id');
 await controller.reset();
 ```
 
-### Scenario 8: Shared Storage
+### Scenario 9: Shared Storage
 
 Move completed downloads to public Downloads folder:
 
@@ -720,7 +828,7 @@ if (availableBytes != null && availableBytes > requiredBytes) {
 }
 ```
 
-### Scenario 9: Permissions Handling
+### Scenario 10: Permissions Handling
 
 ```dart
 final permissions = FileSystemController.instance.permissions;
@@ -741,7 +849,7 @@ if (storageStatus == PermissionStatus.denied) {
 }
 ```
 
-### Scenario 10: Social Media Theming
+### Scenario 11: Social Media Theming
 
 Apply pre-built or custom themes:
 
@@ -935,9 +1043,24 @@ Main controller for file operations.
 |--------|----------|
 | `AudioMessageTransferWidget` | Voice messages, audio files |
 | `ImageMessageTransferWidget` | Photos, images |
-| `VideoMessageTransferWidget` | Videos |
+| `VideoMessageTransferWidget` | Videos with download in chat |
 | `FileMessageTransferWidget` | Generic files (ZIP, APK, etc.) |
 | `DocumentMessageTransferWidget` | PDF, DOCX, XLSX, PPTX |
+
+### Video Player Widgets
+
+| Widget | Use Case |
+|--------|----------|
+| `VideoDownloadPlayerWidget` | Download and play videos with Chewie |
+| `FullscreenVideoPlayer` | Standalone fullscreen player |
+
+### Video Player Enums & Config
+
+| Class | Description |
+|-------|-------------|
+| `VideoDisplayMode` | Enum: `inline`, `fullscreen` |
+| `VideoPlayerState` | Enum: `idle`, `downloading`, `paused`, `failed`, `ready`, `initializing`, `playing`, `playbackError` |
+| `VideoPlayerConfig` | Configuration for display mode, playback, and controls |
 
 ### Transfer Types
 
@@ -1061,6 +1184,8 @@ flutter run
 |---------|---------|
 | `background_downloader` | Background download support (^9.4.3) |
 | `cached_network_image` | Network image caching |
+| `video_player` | Video playback (^2.9.2) |
+| `chewie` | Video player UI controls (^1.8.5) |
 | `path_provider` | System directories |
 | `crypto` | Hash generation |
 

@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-12-30
+
+### Added
+
+#### Video Download & Player Widget
+- **VideoDownloadPlayerWidget** - All-in-one widget for downloading and playing videos
+  - Download progress with speed and percentage display
+  - Integrated Chewie player for beautiful video controls
+  - Thumbnail support with cached network images
+  - Duration badge overlay
+  - Theme integration with `SocialTransferThemeData`
+
+#### Display Modes
+- **VideoDisplayMode** enum with two modes:
+  - `inline` - Play video within the card widget (like WhatsApp)
+  - `fullscreen` - Open dedicated fullscreen player (like Telegram)
+
+#### Fullscreen Video Player
+- **FullscreenVideoPlayer** widget and static `open()` method
+  - Immersive fullscreen experience
+  - Custom controls overlay with gradient backgrounds
+  - Title and subtitle support in top bar
+  - Close button and more options menu
+  - Progress slider with time labels
+  - Play/pause center controls
+  - Landscape/portrait rotation support
+  - Auto-hide status bar option
+  - Configurable background color
+
+#### VideoPlayerConfig Options
+- `displayMode` - Choose inline or fullscreen mode
+- `autoStartDownload` - Auto-start download on widget init
+- `autoPlay` - Auto-play after download completes
+- `looping` - Loop video playback
+- `showControls` - Show/hide player controls
+- `showCloseButton` - Show close button in fullscreen
+- `hideStatusBarInFullscreen` - Hide status bar in fullscreen
+- `fullscreenBackgroundColor` - Background color for fullscreen
+- `aspectRatio` - Custom aspect ratio
+- `allowFullScreen` - Allow fullscreen toggle
+- `allowPlaybackSpeedChanging` - Speed controls
+- `allowMuting` - Mute controls
+- `progressColors` - Custom Chewie progress colors
+
+#### New Dependencies
+- `video_player: ^2.9.2` - Official Flutter video player
+- `chewie: ^1.8.5` - Beautiful video player UI wrapper
+
+### Changed
+
+- Updated example app with Video Player demo screen
+- Added display mode examples showing inline vs fullscreen
+- Updated home screen with Video Player feature card
+
+---
+
 ## [1.0.0] - 2025-12-27
 
 ### ⚠️ Breaking Changes
