@@ -17,6 +17,7 @@ import '../features/firebase/firebase_download_screen.dart';
 import '../features/firebase/firebase_upload_screen.dart';
 import '../features/https/https_download_screen.dart';
 import '../features/https/https_upload_screen.dart';
+import '../features/video/video_player_demo_screen.dart';
 
 /// App router configuration using go_router.
 final appRouter = GoRouter(
@@ -123,6 +124,13 @@ final appRouter = GoRouter(
           path: '/https-upload',
           name: 'https-upload',
           builder: (context, state) => const HttpsUploadScreen(),
+        ),
+
+        // Video Player
+        GoRoute(
+          path: '/video-player',
+          name: 'video-player',
+          builder: (context, state) => const VideoPlayerDemoScreen(),
         ),
       ],
     ),

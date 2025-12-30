@@ -114,3 +114,9 @@ export 'src/widgets/document_download_card.dart';
 // ═══════════════════════════════════════════════════════════════════════════
 
 export 'src/widgets/messages/messages.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WIDGETS - Video download and player
+// ═══════════════════════════════════════════════════════════════════════════
+
+export 'src/widgets/video/video.dart';

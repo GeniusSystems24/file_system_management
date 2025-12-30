@@ -102,6 +102,15 @@ class HomeScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 12),
                 FeatureCard(
+                  title: 'Video Player',
+                  description: 'Download and play videos with Chewie player, progress tracking, and controls',
+                  icon: Icons.play_circle_fill,
+                  route: '/video-player',
+                  color: Colors.red,
+                  tags: ['Video', 'Download', 'Player', 'Chewie'],
+                ),
+                SizedBox(height: 12),
+                FeatureCard(
                   title: 'Social Media Themes',
                   description: 'WhatsApp, Telegram, Instagram-inspired designs with customization',
                   icon: Icons.palette,
@@ -300,9 +309,9 @@ class HomeScreen extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildStatChip(context, '17+', 'Features'),
+              _buildStatChip(context, '18+', 'Features'),
               _buildStatChip(context, '5', 'Themes'),
-              _buildStatChip(context, '6', 'Widgets'),
+              _buildStatChip(context, '7', 'Widgets'),
             ],
           ),
         ],
